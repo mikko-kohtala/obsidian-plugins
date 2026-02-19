@@ -6,8 +6,10 @@ import type { LanguageModel } from "ai";
 import { request as httpsRequest } from "https";
 import { request as httpRequest } from "http";
 import type { IncomingMessage } from "http";
+import type { App } from "obsidian";
 import type { FormatCheckResult } from "../types";
 import type { MarkdownFormatCheckerSettings } from "../settings";
+import { SECRET_IDS } from "../settings";
 
 const TAG = "[format-checker]";
 
@@ -92,25 +94,26 @@ const nodeFetch: typeof globalThis.fetch = (input, init) => {
 	});
 };
 
-function createModel(settings: MarkdownFormatCheckerSettings): LanguageModel {
+function createModel(app: App, settings: MarkdownFormatCheckerSettings): LanguageModel {
+	const apiKey = app.secretStorage.getSecret(SECRET_IDS[settings.provider]) ?? "";
 	switch (settings.provider) {
 		case "claude": {
 			const anthropic = createAnthropic({
-				apiKey: settings.claudeApiKey,
+				apiKey,
 				fetch: nodeFetch,
 			});
 			return anthropic(settings.claudeModel);
 		}
 		case "gemini": {
 			const google = createGoogleGenerativeAI({
-				apiKey: settings.geminiApiKey,
+				apiKey,
 				fetch: nodeFetch,
 			});
 			return google(settings.geminiModel);
 		}
 		case "moonshot": {
 			const moonshot = createMoonshotAI({
-				apiKey: settings.moonshotApiKey,
+				apiKey,
 				fetch: nodeFetch,
 			});
 			return moonshot(settings.moonshotModel);
@@ -118,16 +121,33 @@ function createModel(settings: MarkdownFormatCheckerSettings): LanguageModel {
 	}
 }
 
+export interface ChatMessage {
+	role: "user" | "assistant";
+	content: string;
+}
+
 export function runAIStreaming(
+	app: App,
 	prompt: string,
 	settings: MarkdownFormatCheckerSettings,
 	callbacks: StreamCallbacks
 ): void {
-	void runSDKStreaming(prompt, settings, callbacks);
+	void runSDKStreaming(app, { prompt }, settings, callbacks);
+}
+
+export function runAIChatStreaming(
+	app: App,
+	system: string,
+	messages: ChatMessage[],
+	settings: MarkdownFormatCheckerSettings,
+	callbacks: StreamCallbacks
+): void {
+	void runSDKStreaming(app, { system, messages }, settings, callbacks);
 }
 
 async function runSDKStreaming(
-	prompt: string,
+	app: App,
+	input: { prompt: string } | { system: string; messages: ChatMessage[] },
 	settings: MarkdownFormatCheckerSettings,
 	callbacks: StreamCallbacks
 ): Promise<void> {
@@ -140,15 +160,27 @@ async function runSDKStreaming(
 	}, settings.timeoutMs);
 
 	const providerName = settings.provider;
+	const debug = settings.debugLogs;
 	console.log(TAG, "starting", providerName, "| timeout:", settings.timeoutMs / 1000 + "s");
 
+	if (debug) {
+		if ("prompt" in input) {
+			console.log(TAG, "[debug] prompt (" + input.prompt.length + " chars):\n", input.prompt);
+		} else {
+			console.log(TAG, "[debug] system prompt:\n", input.system);
+			console.log(TAG, "[debug] messages (" + input.messages.length + "):");
+			for (const msg of input.messages) {
+				console.log(TAG, "[debug]  ", msg.role, "(" + msg.content.length + " chars):", msg.content.slice(0, 200) + (msg.content.length > 200 ? "..." : ""));
+			}
+		}
+	}
+
 	try {
-		const model = createModel(settings);
-		const result = streamText({
-			model,
-			prompt,
-			abortSignal: controller.signal,
-		});
+		const model = createModel(app, settings);
+		const streamOpts = "prompt" in input
+			? { model, prompt: input.prompt, abortSignal: controller.signal }
+			: { model, system: input.system, messages: input.messages, abortSignal: controller.signal };
+		const result = streamText(streamOpts);
 
 		for await (const part of result.fullStream) {
 			switch (part.type) {
@@ -171,6 +203,9 @@ async function runSDKStreaming(
 		}
 
 		clearTimeout(timer);
+		if (debug) {
+			console.log(TAG, "[debug] full response (" + outputText.length + " chars):\n", outputText);
+		}
 		callbacks.onDone({
 			success: true,
 			output: outputText,

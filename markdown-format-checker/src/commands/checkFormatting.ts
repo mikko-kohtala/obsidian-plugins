@@ -52,20 +52,20 @@ async function performFormatCheck(
 
 	isRunning = true;
 
-	const applyCtx: ApplyFixContext = {
-		editor: view.editor,
-		fileContent,
-		settings: plugin.settings,
-	};
-	const panel = new FormatCheckPanel(plugin.app, fileName, applyCtx);
-
 	const prompt = buildFormatCheckPrompt(
 		fileName,
 		fileContent,
 		plugin.settings
 	);
 
-	runAIStreaming(prompt, plugin.settings, {
+	const applyCtx: ApplyFixContext = {
+		editor: view.editor,
+		fileContent,
+		settings: plugin.settings,
+	};
+	const panel = new FormatCheckPanel(plugin.app, fileName, prompt, applyCtx);
+
+	runAIStreaming(plugin.app, prompt, plugin.settings, {
 		onData: (update) => {
 			panel.updateContent(update);
 		},

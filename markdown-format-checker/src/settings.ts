@@ -3,27 +3,29 @@ import type MarkdownFormatCheckerPlugin from "./main";
 
 export interface MarkdownFormatCheckerSettings {
 	provider: "claude" | "gemini" | "moonshot";
-	claudeApiKey: string;
 	claudeModel: string;
-	geminiApiKey: string;
 	geminiModel: string;
-	moonshotApiKey: string;
 	moonshotModel: string;
 	timeoutMs: number;
 	customPromptAdditions: string;
+	debugLogs: boolean;
 }
 
 export const DEFAULT_SETTINGS: MarkdownFormatCheckerSettings = {
 	provider: "claude",
-	claudeApiKey: "",
 	claudeModel: "claude-haiku-4-5",
-	geminiApiKey: "",
 	geminiModel: "gemini-3-flash-preview",
-	moonshotApiKey: "",
 	moonshotModel: "kimi-k2.5",
 	timeoutMs: 120000,
 	customPromptAdditions: "",
+	debugLogs: false,
 };
+
+export const SECRET_IDS = {
+	claude: "format-checker-claude-api-key",
+	gemini: "format-checker-gemini-api-key",
+	moonshot: "format-checker-moonshot-api-key",
+} as const;
 
 const MODEL_ALIASES: Record<string, string> = {
 	haiku: "claude-haiku-4-5",
@@ -66,20 +68,12 @@ export class MarkdownFormatCheckerSettingTab extends PluginSettingTab {
 			);
 
 		if (isClaude) {
-			new Setting(containerEl)
-				.setName("API key")
-				.setDesc(
-					"Anthropic API key. Get one from console.anthropic.com."
-				)
-				.addText((text) =>
-					text
-						.setPlaceholder("sk-ant-...")
-						.setValue(this.plugin.settings.claudeApiKey)
-						.onChange(async (value) => {
-							this.plugin.settings.claudeApiKey = value;
-							await this.plugin.saveSettings();
-						})
-				);
+			this.addSecretSetting(containerEl, {
+				name: "API key",
+				desc: "Anthropic API key. Get one from console.anthropic.com.",
+				placeholder: "sk-ant-...",
+				secretId: SECRET_IDS.claude,
+			});
 
 			new Setting(containerEl)
 				.setName("Model")
@@ -98,20 +92,12 @@ export class MarkdownFormatCheckerSettingTab extends PluginSettingTab {
 						})
 				);
 		} else if (this.plugin.settings.provider === "gemini") {
-			new Setting(containerEl)
-				.setName("API key")
-				.setDesc(
-					"Google AI API key. Get one from aistudio.google.com."
-				)
-				.addText((text) =>
-					text
-						.setPlaceholder("AIza...")
-						.setValue(this.plugin.settings.geminiApiKey)
-						.onChange(async (value) => {
-							this.plugin.settings.geminiApiKey = value;
-							await this.plugin.saveSettings();
-						})
-				);
+			this.addSecretSetting(containerEl, {
+				name: "API key",
+				desc: "Google AI API key. Get one from aistudio.google.com.",
+				placeholder: "AIza...",
+				secretId: SECRET_IDS.gemini,
+			});
 
 			new Setting(containerEl)
 				.setName("Model")
@@ -128,20 +114,12 @@ export class MarkdownFormatCheckerSettingTab extends PluginSettingTab {
 						})
 				);
 		} else if (this.plugin.settings.provider === "moonshot") {
-			new Setting(containerEl)
-				.setName("API key")
-				.setDesc(
-					"Moonshot AI API key. Get one from platform.moonshot.ai."
-				)
-				.addText((text) =>
-					text
-						.setPlaceholder("sk-...")
-						.setValue(this.plugin.settings.moonshotApiKey)
-						.onChange(async (value) => {
-							this.plugin.settings.moonshotApiKey = value;
-							await this.plugin.saveSettings();
-						})
-				);
+			this.addSecretSetting(containerEl, {
+				name: "API key",
+				desc: "Moonshot AI API key. Get one from platform.moonshot.ai.",
+				placeholder: "sk-...",
+				secretId: SECRET_IDS.moonshot,
+			});
 
 			new Setting(containerEl)
 				.setName("Model")
@@ -189,5 +167,40 @@ export class MarkdownFormatCheckerSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+
+		new Setting(containerEl)
+			.setName("Debug logs")
+			.setDesc(
+				"Log prompts, messages, and AI responses to the developer console."
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.debugLogs)
+					.onChange(async (value) => {
+						this.plugin.settings.debugLogs = value;
+						await this.plugin.saveSettings();
+					})
+			);
+	}
+
+	private addSecretSetting(containerEl: HTMLElement, opts: {
+		name: string;
+		desc: string;
+		placeholder: string;
+		secretId: string;
+	}): void {
+		const existing = this.app.secretStorage.getSecret(opts.secretId);
+		new Setting(containerEl)
+			.setName(opts.name)
+			.setDesc(opts.desc)
+			.addText((text) => {
+				text.inputEl.type = "password";
+				text
+					.setPlaceholder(opts.placeholder)
+					.setValue(existing ?? "")
+					.onChange(async (value) => {
+						this.app.secretStorage.setSecret(opts.secretId, value);
+					});
+			});
 	}
 }
