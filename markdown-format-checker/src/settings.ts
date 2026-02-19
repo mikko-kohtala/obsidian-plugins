@@ -1,0 +1,74 @@
+import { App, PluginSettingTab, Setting } from "obsidian";
+import type MarkdownFormatCheckerPlugin from "./main";
+
+export interface MarkdownFormatCheckerSettings {
+	claudeBinaryPath: string;
+	timeoutMs: number;
+	customPromptAdditions: string;
+}
+
+export const DEFAULT_SETTINGS: MarkdownFormatCheckerSettings = {
+	claudeBinaryPath: "claude",
+	timeoutMs: 60000,
+	customPromptAdditions: "",
+};
+
+export class MarkdownFormatCheckerSettingTab extends PluginSettingTab {
+	plugin: MarkdownFormatCheckerPlugin;
+
+	constructor(app: App, plugin: MarkdownFormatCheckerPlugin) {
+		super(app, plugin);
+		this.plugin = plugin;
+	}
+
+	display(): void {
+		const { containerEl } = this;
+		containerEl.empty();
+
+		new Setting(containerEl)
+			.setName("Claude binary path")
+			.setDesc(
+				"Path to the Claude Code CLI binary. Use \"claude\" if it's in your PATH, or set the full path (e.g., /Users/mikko/.local/bin/claude)."
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder("/usr/local/bin/claude")
+					.setValue(this.plugin.settings.claudeBinaryPath)
+					.onChange(async (value) => {
+						this.plugin.settings.claudeBinaryPath = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Timeout (seconds)")
+			.setDesc("Maximum time to wait for Claude to respond.")
+			.addText((text) =>
+				text
+					.setPlaceholder("60")
+					.setValue(String(this.plugin.settings.timeoutMs / 1000))
+					.onChange(async (value) => {
+						const parsed = Number(value);
+						if (!isNaN(parsed) && parsed > 0) {
+							this.plugin.settings.timeoutMs = parsed * 1000;
+							await this.plugin.saveSettings();
+						}
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Custom prompt additions")
+			.setDesc(
+				"Additional instructions appended to the formatting check prompt. Use this to add custom rules or preferences."
+			)
+			.addTextArea((text) =>
+				text
+					.setPlaceholder("e.g., Always use dashes for list markers...")
+					.setValue(this.plugin.settings.customPromptAdditions)
+					.onChange(async (value) => {
+						this.plugin.settings.customPromptAdditions = value;
+						await this.plugin.saveSettings();
+					})
+			);
+	}
+}

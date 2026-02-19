@@ -1,0 +1,36 @@
+.format-checker-modal {
+	max-width: 700px;
+}
+
+.format-checker-modal .modal-content {
+	max-height: 70vh;
+	overflow-y: auto;
+}
+
+.format-checker-error {
+	background-color: var(--background-modifier-error);
+	padding: 12px 16px;
+	border-radius: 6px;
+	margin-bottom: 16px;
+}
+
+.format-checker-error-message {
+	color: var(--text-error);
+	margin: 0;
+}
+
+.format-checker-tip {
+	color: var(--text-muted);
+	font-size: var(--font-smallest);
+	margin: 8px 0 0 0;
+}
+
+.format-checker-output {
+	padding: 8px 0;
+}
+
+.format-checker-output h1,
+.format-checker-output h2,
+.format-checker-output h3 {
+	margin-top: 16px;
+}

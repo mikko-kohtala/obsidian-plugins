@@ -1,0 +1,9 @@
+{
+	"id": "markdown-format-checker",
+	"name": "Markdown Format Checker",
+	"version": "1.0.0",
+	"minAppVersion": "1.0.0",
+	"description": "Check markdown formatting using Claude Code CLI with Obsidian-aware rules.",
+	"author": "Mikko Kohtala",
+	"isDesktopOnly": true
+}
