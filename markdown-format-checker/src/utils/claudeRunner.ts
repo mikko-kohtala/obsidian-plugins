@@ -1,6 +1,7 @@
 import { spawn } from "child_process";
 import type { FormatCheckResult } from "../types";
 import type { MarkdownFormatCheckerSettings } from "../settings";
+import type { StreamCallbacks } from "./aiProvider";
 import { homedir } from "os";
 
 const TAG = "[format-checker]";
@@ -10,16 +11,6 @@ function resolvePath(p: string): string {
 		return homedir() + p.slice(1);
 	}
 	return p;
-}
-
-export interface StreamUpdate {
-	thinking: string;
-	text: string;
-}
-
-export interface StreamCallbacks {
-	onData: (update: StreamUpdate) => void;
-	onDone: (result: FormatCheckResult) => void;
 }
 
 interface ParsedDelta {

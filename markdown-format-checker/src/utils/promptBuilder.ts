@@ -50,11 +50,15 @@ export function buildFormatCheckPrompt(
 	fileContent: string,
 	settings: MarkdownFormatCheckerSettings
 ): string {
+	const skillInstructions = settings.provider === "claude"
+		? `Use the /obsidian-markdown skill to check the formatting of this file against Obsidian markdown best practices and common formatting rules.
+
+If you find issues that need fixing, use the /obsidian-cli skill to describe the exact fixes needed.`
+		: `Check the formatting of this Obsidian markdown file against the rules below.`;
+
 	const basePrompt = `You are a markdown formatting checker for an Obsidian vault.
 
-Use the /obsidian-markdown skill to check the formatting of this file against Obsidian markdown best practices and common formatting rules.
-
-If you find issues that need fixing, use the /obsidian-cli skill to describe the exact fixes needed.
+${skillInstructions}
 
 ## File being checked
 **Filename:** ${fileName}

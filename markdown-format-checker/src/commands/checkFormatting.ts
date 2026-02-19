@@ -1,7 +1,7 @@
 import { MarkdownView, Notice } from "obsidian";
 import type MarkdownFormatCheckerPlugin from "../main";
 import type { ApplyFixContext } from "../types";
-import { runClaudeCheckStreaming } from "../utils/claudeRunner";
+import { runAIStreaming } from "../utils/aiProvider";
 import { buildFormatCheckPrompt } from "../utils/promptBuilder";
 import { FormatCheckPanel } from "../ui/resultsModal";
 
@@ -65,7 +65,7 @@ async function performFormatCheck(
 		plugin.settings
 	);
 
-	runClaudeCheckStreaming(prompt, plugin.settings, {
+	runAIStreaming(prompt, plugin.settings, {
 		onData: (update) => {
 			panel.updateContent(update);
 		},

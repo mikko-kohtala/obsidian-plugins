@@ -1,7 +1,7 @@
 import { App, Component, MarkdownRenderer, Notice, setIcon } from "obsidian";
 import type { ApplyFixContext, FormatCheckResult } from "../types";
-import type { StreamUpdate } from "../utils/claudeRunner";
-import { runClaudeCheckStreaming } from "../utils/claudeRunner";
+import type { StreamUpdate } from "../utils/aiProvider";
+import { runAIStreaming } from "../utils/aiProvider";
 import { buildApplyFixPrompt } from "../utils/promptBuilder";
 
 export class FormatCheckPanel {
@@ -92,9 +92,10 @@ export class FormatCheckPanel {
 		this.footerEl = this.containerEl.createDiv({
 			cls: "format-checker-panel-footer",
 		});
+		const providerLabel = this.applyCtx?.settings.provider === "gemini" ? "Gemini" : "Claude";
 		this.footerStatus = this.footerEl.createEl("span", {
 			cls: "format-checker-panel-status",
-			text: "Checking with Claude...",
+			text: `Checking with ${providerLabel}...`,
 		});
 		this.applyBtn = this.footerEl.createEl("button", {
 			cls: "format-checker-apply-btn",
@@ -208,7 +209,7 @@ export class FormatCheckPanel {
 			this.applyCtx.settings
 		);
 
-		runClaudeCheckStreaming(prompt, this.applyCtx.settings, {
+		runAIStreaming(prompt, this.applyCtx.settings, {
 			onData: (update) => {
 				if (this.isClosed) return;
 				if (update.thinking) {
