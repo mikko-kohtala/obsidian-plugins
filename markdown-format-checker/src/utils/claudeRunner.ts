@@ -107,13 +107,14 @@ export function runClaudeCheckStreaming(
 	const args = [
 		"-p",
 		"--model", settings.claudeModel,
+		"--effort", settings.effortLevel,
 		"--output-format", "stream-json",
 		"--verbose",
 		"--include-partial-messages",
 	];
 
 	console.log(TAG, "spawning:", binaryPath, args.join(" "));
-	console.log(TAG, "model:", settings.claudeModel, "| timeout:", settings.timeoutMs / 1000 + "s");
+	console.log(TAG, "model:", settings.claudeModel, "| effort:", settings.effortLevel, "| timeout:", settings.timeoutMs / 1000 + "s");
 
 	const child = spawn(binaryPath, args, {
 		env,

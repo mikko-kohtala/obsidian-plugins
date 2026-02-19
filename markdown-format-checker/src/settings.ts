@@ -4,6 +4,7 @@ import type MarkdownFormatCheckerPlugin from "./main";
 export interface MarkdownFormatCheckerSettings {
 	claudeBinaryPath: string;
 	claudeModel: string;
+	effortLevel: "low" | "medium" | "high";
 	timeoutMs: number;
 	customPromptAdditions: string;
 }
@@ -11,7 +12,8 @@ export interface MarkdownFormatCheckerSettings {
 export const DEFAULT_SETTINGS: MarkdownFormatCheckerSettings = {
 	claudeBinaryPath: "~/.local/bin/claude",
 	claudeModel: "claude-haiku-4-5",
-	timeoutMs: 60000,
+	effortLevel: "low",
+	timeoutMs: 120000,
 	customPromptAdditions: "",
 };
 
@@ -65,6 +67,23 @@ export class MarkdownFormatCheckerSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.claudeModel)
 					.onChange(async (value) => {
 						this.plugin.settings.claudeModel = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Effort level")
+			.setDesc(
+				"Controls thinking depth. Low is fast with minimal reasoning, high enables deep analysis."
+			)
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption("low", "Low (fast)")
+					.addOption("medium", "Medium")
+					.addOption("high", "High (thorough)")
+					.setValue(this.plugin.settings.effortLevel)
+					.onChange(async (value) => {
+						this.plugin.settings.effortLevel = value as "low" | "medium" | "high";
 						await this.plugin.saveSettings();
 					})
 			);
