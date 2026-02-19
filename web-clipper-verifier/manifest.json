@@ -1,0 +1,9 @@
+{
+	"id": "web-clipper-verifier",
+	"name": "Web Clipper Verifier",
+	"version": "1.0.0",
+	"minAppVersion": "1.0.0",
+	"description": "Verify that Obsidian Web Clipper content is complete by comparing against the original source URL.",
+	"author": "Mikko Kohtala",
+	"isDesktopOnly": true
+}
