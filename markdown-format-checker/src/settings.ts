@@ -3,15 +3,27 @@ import type MarkdownFormatCheckerPlugin from "./main";
 
 export interface MarkdownFormatCheckerSettings {
 	claudeBinaryPath: string;
+	claudeModel: string;
 	timeoutMs: number;
 	customPromptAdditions: string;
 }
 
 export const DEFAULT_SETTINGS: MarkdownFormatCheckerSettings = {
-	claudeBinaryPath: "claude",
+	claudeBinaryPath: "~/.local/bin/claude",
+	claudeModel: "claude-haiku-4-5",
 	timeoutMs: 60000,
 	customPromptAdditions: "",
 };
+
+const MODEL_ALIASES: Record<string, string> = {
+	haiku: "claude-haiku-4-5",
+	sonnet: "claude-sonnet-4-6",
+	opus: "claude-opus-4-6",
+};
+
+export function migrateModel(model: string): string {
+	return MODEL_ALIASES[model] ?? model;
+}
 
 export class MarkdownFormatCheckerSettingTab extends PluginSettingTab {
 	plugin: MarkdownFormatCheckerPlugin;
@@ -28,14 +40,31 @@ export class MarkdownFormatCheckerSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Claude binary path")
 			.setDesc(
-				"Path to the Claude Code CLI binary. Use \"claude\" if it's in your PATH, or set the full path (e.g., /Users/mikko/.local/bin/claude)."
+				"Path to the Claude Code CLI binary. Use \"claude\" if it's in your PATH, or set the full path (e.g., ~/.local/bin/claude)."
 			)
 			.addText((text) =>
 				text
-					.setPlaceholder("/usr/local/bin/claude")
+					.setPlaceholder("~/.local/bin/claude")
 					.setValue(this.plugin.settings.claudeBinaryPath)
 					.onChange(async (value) => {
 						this.plugin.settings.claudeBinaryPath = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Model")
+			.setDesc(
+				"Claude model to use. Haiku is fast and cheap, Sonnet is more capable."
+			)
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption("claude-haiku-4-5", "Haiku (fast)")
+					.addOption("claude-sonnet-4-6", "Sonnet")
+					.addOption("claude-opus-4-6", "Opus")
+					.setValue(this.plugin.settings.claudeModel)
+					.onChange(async (value) => {
+						this.plugin.settings.claudeModel = value;
 						await this.plugin.saveSettings();
 					})
 			);

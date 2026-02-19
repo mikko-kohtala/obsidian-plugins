@@ -1,8 +1,9 @@
 import { MarkdownView, Notice } from "obsidian";
 import type MarkdownFormatCheckerPlugin from "../main";
-import { runClaudeCheck } from "../utils/claudeRunner";
+import type { ApplyFixContext } from "../types";
+import { runClaudeCheckStreaming } from "../utils/claudeRunner";
 import { buildFormatCheckPrompt } from "../utils/promptBuilder";
-import { FormatCheckResultsModal } from "../ui/resultsModal";
+import { FormatCheckPanel } from "../ui/resultsModal";
 
 let isRunning = false;
 
@@ -50,24 +51,27 @@ async function performFormatCheck(
 	}
 
 	isRunning = true;
-	const loadingNotice = new Notice("Checking formatting with Claude...", 0);
 
-	try {
-		const prompt = buildFormatCheckPrompt(
-			fileName,
-			fileContent,
-			plugin.settings
-		);
-		const result = await runClaudeCheck(prompt, plugin.settings);
+	const applyCtx: ApplyFixContext = {
+		editor: view.editor,
+		fileContent,
+		settings: plugin.settings,
+	};
+	const panel = new FormatCheckPanel(plugin.app, fileName, applyCtx);
 
-		loadingNotice.hide();
-		new FormatCheckResultsModal(plugin.app, result).open();
-	} catch (err) {
-		loadingNotice.hide();
-		new Notice(
-			`Format check failed: ${err instanceof Error ? err.message : String(err)}`
-		);
-	} finally {
-		isRunning = false;
-	}
+	const prompt = buildFormatCheckPrompt(
+		fileName,
+		fileContent,
+		plugin.settings
+	);
+
+	runClaudeCheckStreaming(prompt, plugin.settings, {
+		onData: (update) => {
+			panel.updateContent(update);
+		},
+		onDone: (result) => {
+			isRunning = false;
+			panel.finalize(result);
+		},
+	});
 }

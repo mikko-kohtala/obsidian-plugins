@@ -2,6 +2,7 @@ import { MarkdownView, Notice, Plugin } from "obsidian";
 import {
 	DEFAULT_SETTINGS,
 	MarkdownFormatCheckerSettingTab,
+	migrateModel,
 	type MarkdownFormatCheckerSettings,
 } from "./settings";
 import { registerCheckFormattingCommand } from "./commands/checkFormatting";
@@ -43,6 +44,7 @@ export default class MarkdownFormatCheckerPlugin extends Plugin {
 			DEFAULT_SETTINGS,
 			(await this.loadData()) as Partial<MarkdownFormatCheckerSettings>
 		);
+		this.settings.claudeModel = migrateModel(this.settings.claudeModel);
 	}
 
 	async saveSettings(): Promise<void> {
