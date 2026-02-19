@@ -39,12 +39,20 @@ export default class MarkdownFormatCheckerPlugin extends Plugin {
 	}
 
 	async loadSettings(): Promise<void> {
+		const saved = (await this.loadData()) as Record<string, unknown> | null;
 		this.settings = Object.assign(
 			{},
 			DEFAULT_SETTINGS,
-			(await this.loadData()) as Partial<MarkdownFormatCheckerSettings>
-		);
+			saved,
+		) as MarkdownFormatCheckerSettings;
 		this.settings.claudeModel = migrateModel(this.settings.claudeModel);
+
+		const deprecated = ["effortLevel", "claudeBinaryPath", "geminiBinaryPath"];
+		const settingsObj = this.settings as unknown as Record<string, unknown>;
+		if (saved && deprecated.some((k) => k in saved)) {
+			for (const key of deprecated) delete settingsObj[key];
+			await this.saveSettings();
+		}
 	}
 
 	async saveSettings(): Promise<void> {

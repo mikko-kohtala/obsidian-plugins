@@ -288,11 +288,19 @@ export class FormatCheckPanel {
 function parseSearchReplaceBlocks(
 	output: string
 ): { search: string; replace: string }[] {
+	// Strip markdown code fences that models often wrap output in
+	const stripped = output.replace(/^```[\w]*\n?/gm, "").replace(/^```$/gm, "");
+
 	const blocks: { search: string; replace: string }[] = [];
-	const regex = /<<<SEARCH\n([\s\S]*?)\n===\n([\s\S]*?)\n>>>/g;
+	const regex = /<<<\s*SEARCH\s*\r?\n([\s\S]*?)\r?\n===\r?\n([\s\S]*?)\r?\n>>>/g;
 	let match;
-	while ((match = regex.exec(output)) !== null) {
+	while ((match = regex.exec(stripped)) !== null) {
 		blocks.push({ search: match[1]!, replace: match[2]! });
 	}
+
+	if (blocks.length === 0) {
+		console.log("[format-checker] no SEARCH/REPLACE blocks parsed. Raw output:", output.slice(0, 500));
+	}
+
 	return blocks;
 }
