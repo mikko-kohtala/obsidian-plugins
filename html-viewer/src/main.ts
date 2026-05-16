@@ -11,7 +11,7 @@ import {
 	type ViewStateResult,
 } from "obsidian";
 
-const VIEW_TYPE_HTML_VIEWER = "html-viewer";
+const VIEW_TYPE_HTML_VIEWER = "mikko-html-viewer";
 const HTML_EXTENSIONS = ["html", "htm"];
 const DEFAULT_ZOOM_LEVEL = 1;
 const MIN_ZOOM_LEVEL = 0.5;

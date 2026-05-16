@@ -19,8 +19,24 @@ Trusted app mode is intentionally separate. Use it only for HTML you control. It
 
 ## Usage
 
-1. Enable the plugin in Obsidian Community Plugins.
-2. Open an `.html` or `.htm` file.
+1. Build the plugin:
+
+```bash
+pnpm install
+pnpm run build
+```
+
+2. Install it into the vault using the local plugin ID:
+
+```bash
+mkdir -p /Users/mikko/obsidian/.obsidian/plugins
+ln -sfn /Users/mikko/code/obsidian-plugins/html-viewer /Users/mikko/obsidian/.obsidian/plugins/mikko-html-viewer
+```
+
+3. Enable `HTML Viewer` in Obsidian Community Plugins.
+4. Open an `.html` or `.htm` file.
+
+The manifest ID is `mikko-html-viewer` so it does not collide with community plugins that use the public `html-viewer` ID. Keep the public `html-viewer` plugin disabled in this vault so `.html` files consistently open with this local plugin.
 
 For the course concept pack, open:
 
