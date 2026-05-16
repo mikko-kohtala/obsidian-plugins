@@ -1,0 +1,9 @@
+{
+	"id": "html-viewer",
+	"name": "HTML Viewer",
+	"version": "1.0.0",
+	"minAppVersion": "1.4.0",
+	"description": "View local .html and .htm files in Obsidian with sandboxed rendering, source mode, embeds, and trusted local app controls.",
+	"author": "Mikko Kohtala",
+	"isDesktopOnly": false
+}
