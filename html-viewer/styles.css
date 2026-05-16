@@ -117,7 +117,21 @@
 	height: 100%;
 	border: 0;
 	background: var(--background-primary);
-	contain: strict;
+}
+
+/*
+ * Keep Obsidian chrome on compositor layers while an HTML iframe is visible.
+ * Explicit backgrounds mask iframe bleed-through, and avoiding will-change
+ * prevents stale sidebar text from sticking during tree expand/collapse.
+ */
+body.html-viewer-active .workspace-ribbon,
+body.html-viewer-active .workspace-split.mod-sidedock,
+body.html-viewer-active .workspace-split.mod-left-split,
+body.html-viewer-active .workspace-split.mod-right-split,
+body.html-viewer-active .status-bar {
+	transform: translateZ(0);
+	backface-visibility: hidden;
+	background-color: var(--background-secondary) !important;
 }
 
 body.html-viewer-active .workspace-ribbon,
@@ -127,7 +141,8 @@ body.html-viewer-active .workspace-sidedock-empty-state,
 body.html-viewer-active .workspace-tabs.mod-top-left-space,
 body.html-viewer-active .workspace-tabs.mod-top-right-space,
 body.html-viewer-active .workspace-tab-header-container,
-body.html-viewer-active .workspace-tab-container {
+body.html-viewer-active .workspace-tab-container,
+body.html-viewer-active .workspace-leaf-content {
 	background-color: var(--background-secondary) !important;
 }
 

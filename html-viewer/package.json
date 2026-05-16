@@ -1,6 +1,6 @@
 {
 	"name": "html-viewer",
-	"version": "1.0.0",
+	"version": "1.0.2",
 	"description": "View local .html and .htm files in Obsidian with sandboxed rendering, source mode, embeds, and trusted local app controls.",
 	"main": "main.js",
 	"type": "module",

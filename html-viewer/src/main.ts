@@ -1041,8 +1041,23 @@ export default class HtmlViewerPlugin extends Plugin {
 	updateActiveViewClass(): void {
 		document.body.toggleClass(
 			"html-viewer-active",
-			isHtmlViewerLeaf(this.app.workspace.activeLeaf),
+			this.hasVisibleHtmlViewerLeaf(),
 		);
+	}
+
+	private hasVisibleHtmlViewerLeaf(): boolean {
+		let found = false;
+
+		this.app.workspace.iterateAllLeaves((leaf) => {
+			if (found || !isHtmlViewerLeaf(leaf)) {
+				return;
+			}
+
+			const rect = leaf.view.containerEl.getBoundingClientRect();
+			found = rect.width > 0 && rect.height > 0;
+		});
+
+		return found;
 	}
 
 	async refreshOpenHtmlDocuments(changedFile?: TFile): Promise<void> {
