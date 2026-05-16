@@ -60,10 +60,26 @@
 	border-color: var(--color-orange);
 }
 
+.html-viewer-toolbar-button.is-disabled {
+	opacity: 0.45;
+	pointer-events: none;
+}
+
+.html-viewer-zoom-reset {
+	min-width: 66px;
+	justify-content: center;
+}
+
 .html-viewer-toolbar-button svg {
 	width: 14px;
 	height: 14px;
 	flex: 0 0 auto;
+}
+
+.html-viewer-toolbar-button:has(> svg:only-child) {
+	width: 30px;
+	padding: 0;
+	justify-content: center;
 }
 
 .html-viewer-path {

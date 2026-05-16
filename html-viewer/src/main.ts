@@ -13,6 +13,10 @@ import {
 
 const VIEW_TYPE_HTML_VIEWER = "html-viewer";
 const HTML_EXTENSIONS = ["html", "htm"];
+const DEFAULT_ZOOM_LEVEL = 1;
+const MIN_ZOOM_LEVEL = 0.5;
+const MAX_ZOOM_LEVEL = 3;
+const ZOOM_STEP = 0.1;
 const ASSET_EXTENSIONS = new Set([
 	"css",
 	"js",
@@ -110,6 +114,26 @@ function booleanFromState(value: unknown, fallback: boolean): boolean {
 	return typeof value === "boolean" ? value : fallback;
 }
 
+function zoomFromState(value: unknown, fallback = DEFAULT_ZOOM_LEVEL): number {
+	if (typeof value !== "number" || !Number.isFinite(value)) {
+		return fallback;
+	}
+
+	return clampZoom(value);
+}
+
+function clampZoom(value: number): number {
+	const clamped = Math.min(
+		MAX_ZOOM_LEVEL,
+		Math.max(MIN_ZOOM_LEVEL, value),
+	);
+	return Math.round(clamped * 100) / 100;
+}
+
+function formatZoom(value: number): string {
+	return `${Math.round(value * 100)}%`;
+}
+
 function withoutQueryAndHash(resourcePath: string): string {
 	try {
 		const url = new URL(resourcePath);
@@ -141,6 +165,17 @@ function ensureBaseElement(doc: Document, baseHref: string): void {
 	const base = doc.createElement("base");
 	base.href = baseHref;
 	doc.head.prepend(base);
+}
+
+function ensureZoomStyle(doc: Document, zoomLevel: number): void {
+	const style = doc.createElement("style");
+	style.setAttribute("data-html-viewer-zoom", "");
+	style.textContent = `
+html {
+	zoom: ${zoomLevel} !important;
+}
+`;
+	doc.head.appendChild(style);
 }
 
 function resolveVaultHref(sourcePath: string, href: string): string | null {
@@ -188,6 +223,7 @@ function makeToolbarButton(
 	icon: string,
 	label: string,
 	onClick: () => void,
+	options: { showLabel?: boolean } = {},
 ): HTMLButtonElement {
 	const button = container.createEl("button", {
 		cls: "html-viewer-toolbar-button",
@@ -198,7 +234,9 @@ function makeToolbarButton(
 		},
 	});
 	setIcon(button, icon);
-	button.createSpan({ text: label });
+	if (options.showLabel !== false) {
+		button.createSpan({ text: label });
+	}
 	button.addEventListener("click", onClick);
 	return button;
 }
@@ -209,11 +247,15 @@ class HtmlViewerView extends FileView {
 		sourceMode: false,
 		scriptsEnabled: false,
 		trustedAppMode: false,
+		zoomLevel: DEFAULT_ZOOM_LEVEL,
 	};
 	private toolbarEl: HTMLElement | null = null;
 	private renderEl: HTMLElement | null = null;
 	private pathEl: HTMLElement | null = null;
 	private sourceButton: HTMLButtonElement | null = null;
+	private zoomOutButton: HTMLButtonElement | null = null;
+	private zoomResetButton: HTMLButtonElement | null = null;
+	private zoomInButton: HTMLButtonElement | null = null;
 	private scriptButton: HTMLButtonElement | null = null;
 	private trustedButton: HTMLButtonElement | null = null;
 	private renderVersion = 0;
@@ -253,6 +295,7 @@ class HtmlViewerView extends FileView {
 			sourceMode: this.state.sourceMode,
 			scriptsEnabled: this.state.scriptsEnabled,
 			trustedAppMode: this.state.trustedAppMode,
+			zoomLevel: this.state.zoomLevel,
 		};
 	}
 
@@ -284,6 +327,7 @@ class HtmlViewerView extends FileView {
 				viewState.trustedAppMode,
 				this.plugin.settings.defaultTrustedAppMode,
 			);
+			this.state.zoomLevel = zoomFromState(viewState.zoomLevel);
 		}
 
 		await super.setState(state, result);
@@ -353,6 +397,9 @@ class HtmlViewerView extends FileView {
 		} else {
 			this.toolbarEl = null;
 			this.sourceButton = null;
+			this.zoomOutButton = null;
+			this.zoomResetButton = null;
+			this.zoomInButton = null;
 			this.scriptButton = null;
 			this.trustedButton = null;
 			this.pathEl = null;
@@ -376,6 +423,37 @@ class HtmlViewerView extends FileView {
 				this.state.sourceMode = !this.state.sourceMode;
 				void this.renderFile();
 			},
+		);
+
+		const zoomGroup = toolbarEl.createDiv({
+			cls: "html-viewer-toolbar-group",
+		});
+		this.zoomOutButton = makeToolbarButton(
+			zoomGroup,
+			"zoom-out",
+			"Zoom Out",
+			() => {
+				this.setZoom(this.state.zoomLevel - ZOOM_STEP);
+			},
+			{ showLabel: false },
+		);
+		this.zoomResetButton = makeToolbarButton(
+			zoomGroup,
+			"rotate-ccw",
+			"Reset Zoom",
+			() => {
+				this.setZoom(DEFAULT_ZOOM_LEVEL);
+			},
+		);
+		this.zoomResetButton.addClass("html-viewer-zoom-reset");
+		this.zoomInButton = makeToolbarButton(
+			zoomGroup,
+			"zoom-in",
+			"Zoom In",
+			() => {
+				this.setZoom(this.state.zoomLevel + ZOOM_STEP);
+			},
+			{ showLabel: false },
 		);
 
 		const securityGroup = toolbarEl.createDiv({
@@ -417,6 +495,22 @@ class HtmlViewerView extends FileView {
 			?.querySelector("span")
 			?.setText(this.state.sourceMode ? "Rendered" : "Source");
 
+		this.zoomOutButton?.toggleClass(
+			"is-disabled",
+			this.state.zoomLevel <= MIN_ZOOM_LEVEL,
+		);
+		this.zoomInButton?.toggleClass(
+			"is-disabled",
+			this.state.zoomLevel >= MAX_ZOOM_LEVEL,
+		);
+		this.zoomResetButton
+			?.querySelector("span")
+			?.setText(formatZoom(this.state.zoomLevel));
+		this.zoomResetButton?.toggleClass(
+			"is-active",
+			this.state.zoomLevel !== DEFAULT_ZOOM_LEVEL,
+		);
+
 		this.scriptButton?.toggleClass("is-active", this.state.scriptsEnabled);
 		this.scriptButton
 			?.querySelector("span")
@@ -437,6 +531,19 @@ class HtmlViewerView extends FileView {
 		if (this.pathEl) {
 			this.pathEl.setText(this.file?.path ?? "");
 			this.pathEl.setAttr("title", this.file?.path ?? "");
+		}
+	}
+
+	private setZoom(zoomLevel: number): void {
+		const nextZoomLevel = clampZoom(zoomLevel);
+		if (nextZoomLevel === this.state.zoomLevel) {
+			return;
+		}
+
+		this.state.zoomLevel = nextZoomLevel;
+		this.updateToolbar();
+		if (!this.state.sourceMode) {
+			void this.renderFile();
 		}
 	}
 
@@ -484,7 +591,11 @@ class HtmlViewerView extends FileView {
 			return;
 		}
 
-		const renderedHtml = await this.plugin.prepareHtmlForRender(file, html);
+		const renderedHtml = await this.plugin.prepareHtmlForRender(
+			file,
+			html,
+			this.state.zoomLevel,
+		);
 		const iframe = this.renderEl.ownerDocument.createElement("iframe");
 		iframe.className = "html-viewer-iframe";
 		iframe.title = file.name;
@@ -563,6 +674,7 @@ class HtmlViewerView extends FileView {
 							sourceMode: this.state.sourceMode,
 							scriptsEnabled: this.state.scriptsEnabled,
 							trustedAppMode: this.state.trustedAppMode,
+							zoomLevel: this.state.zoomLevel,
 						},
 						active: true,
 					});
@@ -788,12 +900,17 @@ export default class HtmlViewerPlugin extends Plugin {
 		);
 	}
 
-	async prepareHtmlForRender(file: TFile, html: string): Promise<string> {
+	async prepareHtmlForRender(
+		file: TFile,
+		html: string,
+		zoomLevel = DEFAULT_ZOOM_LEVEL,
+	): Promise<string> {
 		const doc = new DOMParser().parseFromString(html, "text/html");
 		ensureBaseElement(doc, this.getResourceBaseHref(file));
 
 		await this.inlineLocalStylesheets(file, doc);
 		await this.inlineLocalScripts(file, doc);
+		ensureZoomStyle(doc, zoomLevel);
 
 		return `${getDocumentPrefix(html)}\n${doc.documentElement.outerHTML}`;
 	}

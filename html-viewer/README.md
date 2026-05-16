@@ -7,6 +7,7 @@ Local Obsidian plugin for viewing `.html` and `.htm` files inside the vault.
 - Opens HTML files in a native Obsidian file view.
 - Loads files through Obsidian resource URLs so adjacent CSS, JavaScript, images, and relative links work.
 - Provides a source/render toggle, refresh button, and script/trusted-app controls.
+- Provides per-tab zoom controls for the rendered web page.
 - Supports `![[file.html]]` embeds when Obsidian's embed registry is available.
 - Refreshes open views when the HTML file or sibling assets change.
 
