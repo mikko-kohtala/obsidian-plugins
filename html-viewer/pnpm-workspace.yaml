@@ -1,0 +1,6 @@
+# Supply-chain security: don't install packages published less than 3 days ago,
+# and block packages that lose provenance/signatures compared to prior releases.
+minimumReleaseAge: 4320
+trustPolicy: no-downgrade
+onlyBuiltDependencies:
+  - esbuild
