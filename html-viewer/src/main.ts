@@ -90,6 +90,11 @@ function isHtmlFile(file: unknown): file is TFile {
 	);
 }
 
+function isHtmlViewerLeaf(leaf: WorkspaceLeaf | null | undefined): boolean {
+	const view = leaf?.view as { getViewType?: () => string } | undefined;
+	return view?.getViewType?.() === VIEW_TYPE_HTML_VIEWER;
+}
+
 function getParentPath(path: string): string {
 	const index = path.lastIndexOf("/");
 	return index === -1 ? "" : path.slice(0, index);
@@ -287,6 +292,7 @@ class HtmlViewerView extends FileView {
 	onload(): void {
 		super.onload();
 		this.buildShell();
+		this.plugin.updateActiveViewClass();
 	}
 
 	getState(): Record<string, unknown> {
@@ -831,6 +837,7 @@ export default class HtmlViewerPlugin extends Plugin {
 		this.registerExtensions(HTML_EXTENSIONS, VIEW_TYPE_HTML_VIEWER);
 		this.registerHtmlEmbeds();
 		this.registerVaultWatchers();
+		this.registerActiveViewClassUpdater();
 
 		this.addCommand({
 			id: "open-current-html-file",
@@ -853,6 +860,7 @@ export default class HtmlViewerPlugin extends Plugin {
 
 	onunload(): void {
 		this.embeds.clear();
+		document.body.removeClass("html-viewer-active");
 	}
 
 	async loadSettings(): Promise<void> {
@@ -1030,6 +1038,13 @@ export default class HtmlViewerPlugin extends Plugin {
 		this.embeds.delete(embed);
 	}
 
+	updateActiveViewClass(): void {
+		document.body.toggleClass(
+			"html-viewer-active",
+			isHtmlViewerLeaf(this.app.workspace.activeLeaf),
+		);
+	}
+
 	async refreshOpenHtmlDocuments(changedFile?: TFile): Promise<void> {
 		const refreshes: Promise<void>[] = [];
 
@@ -1096,6 +1111,24 @@ export default class HtmlViewerPlugin extends Plugin {
 						leaf.view.showDeleted(file);
 					}
 				});
+			}),
+		);
+	}
+
+	private registerActiveViewClassUpdater(): void {
+		this.app.workspace.onLayoutReady(() => {
+			this.updateActiveViewClass();
+		});
+
+		this.registerEvent(
+			this.app.workspace.on("active-leaf-change", () => {
+				this.updateActiveViewClass();
+			}),
+		);
+
+		this.registerEvent(
+			this.app.workspace.on("layout-change", () => {
+				this.updateActiveViewClass();
 			}),
 		);
 	}
