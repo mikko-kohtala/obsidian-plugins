@@ -7,7 +7,10 @@ import type { WebClipperVerifierSettings } from "../settings";
 const TAG = "[clipper-verifier]";
 
 export class FetchError extends Error {
-	constructor(message: string, public statusCode?: number) {
+	constructor(
+		message: string,
+		public statusCode?: number,
+	) {
 		super(message);
 		this.name = "FetchError";
 	}
@@ -15,7 +18,7 @@ export class FetchError extends Error {
 
 export async function extractFromUrl(
 	url: string,
-	settings: WebClipperVerifierSettings
+	settings: WebClipperVerifierSettings,
 ): Promise<ExtractedContent> {
 	console.log(TAG, "fetching:", url);
 
@@ -25,7 +28,7 @@ export async function extractFromUrl(
 			url,
 			headers: {
 				"User-Agent": settings.userAgent,
-				"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+				Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 				"Accept-Language": "en-US,en;q=0.5",
 			},
 			throw: false,
@@ -34,19 +37,16 @@ export async function extractFromUrl(
 		if (response.status === 401 || response.status === 403) {
 			throw new FetchError(
 				`Access denied (HTTP ${response.status}). The page may require login or be behind a paywall.`,
-				response.status
+				response.status,
 			);
 		}
 		if (response.status === 429) {
-			throw new FetchError(
-				"Rate limited (HTTP 429). Try again later.",
-				429
-			);
+			throw new FetchError("Rate limited (HTTP 429). Try again later.", 429);
 		}
 		if (response.status >= 400) {
 			throw new FetchError(
 				`HTTP error ${response.status}: ${response.headers?.["statusText"] ?? "Request failed"}`,
-				response.status
+				response.status,
 			);
 		}
 
@@ -74,7 +74,7 @@ export async function extractFromUrl(
 
 	if (!article || !article.textContent?.trim()) {
 		throw new FetchError(
-			"Could not extract article content. The page may require JavaScript to render, or it may not contain article content."
+			"Could not extract article content. The page may require JavaScript to render, or it may not contain article content.",
 		);
 	}
 

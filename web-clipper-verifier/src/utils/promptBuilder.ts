@@ -4,7 +4,7 @@ import type { WebClipperVerifierSettings } from "../settings";
 export function buildVerifyPrompt(
 	sourceContent: ExtractedContent,
 	clippingBody: string,
-	settings: WebClipperVerifierSettings
+	settings: WebClipperVerifierSettings,
 ): string {
 	const truncationNote = sourceContent.truncated
 		? "\n\n**Note:** The source text was truncated due to length. Only compare content that appears in the source text above."

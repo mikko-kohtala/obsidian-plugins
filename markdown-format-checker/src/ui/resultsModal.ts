@@ -45,7 +45,12 @@ export class FormatCheckPanel {
 	private isBusy = false;
 	private isClosed = false;
 
-	constructor(app: App, fileName: string, initialPrompt: string, applyCtx: ApplyFixContext | null = null) {
+	constructor(
+		app: App,
+		fileName: string,
+		initialPrompt: string,
+		applyCtx: ApplyFixContext | null = null,
+	) {
 		this.app = app;
 		this.fileName = fileName;
 		this.initialPrompt = initialPrompt;
@@ -288,7 +293,7 @@ export class FormatCheckPanel {
 			this.accumulated,
 			this.outputDiv,
 			"",
-			this.renderComponent
+			this.renderComponent,
 		);
 	}
 
@@ -305,7 +310,7 @@ export class FormatCheckPanel {
 			this.fileName,
 			this.applyCtx.fileContent,
 			this.accumulated,
-			this.applyCtx.settings
+			this.applyCtx.settings,
 		);
 
 		this.startStreaming();
@@ -361,18 +366,17 @@ export class FormatCheckPanel {
 
 		this.applyCtx.fileContent = content;
 		this.applyBtn.style.display = "none";
-		const msg = applied === blocks.length
-			? `All ${applied} fixes applied.`
-			: `${applied} of ${blocks.length} fixes applied.`;
+		const msg =
+			applied === blocks.length
+				? `All ${applied} fixes applied.`
+				: `${applied} of ${blocks.length} fixes applied.`;
 		this.footerStatus.style.display = "";
 		this.footerStatus.setText(`${msg} Ctrl/Cmd+Z to undo.`);
 		this.footerStatus.style.animation = "none";
 	}
 }
 
-function parseSearchReplaceBlocks(
-	output: string
-): { search: string; replace: string }[] {
+function parseSearchReplaceBlocks(output: string): { search: string; replace: string }[] {
 	// Strip markdown code fences that models often wrap output in
 	const stripped = output.replace(/^```[\w]*\n?/gm, "").replace(/^```$/gm, "");
 
@@ -384,7 +388,10 @@ function parseSearchReplaceBlocks(
 	}
 
 	if (blocks.length === 0 && output.includes("<<<")) {
-		console.log("[format-checker] no SEARCH/REPLACE blocks parsed. Raw output:", output.slice(0, 500));
+		console.log(
+			"[format-checker] no SEARCH/REPLACE blocks parsed. Raw output:",
+			output.slice(0, 500),
+		);
 	}
 
 	return blocks;

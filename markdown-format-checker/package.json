@@ -2,21 +2,21 @@
 	"name": "markdown-format-checker",
 	"version": "1.0.0",
 	"description": "Check markdown formatting using Claude Code CLI with Obsidian-aware rules.",
-	"main": "main.js",
+	"keywords": [],
+	"license": "MIT",
 	"type": "module",
-	"packageManager": "bun@1.4.2",
+	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"lint": "oxlint",
+		"lint:fix": "oxlint --fix",
+		"format": "oxfmt -c .oxfmtrc.jsonc .",
+		"format:check": "oxfmt -c .oxfmtrc.jsonc --check .",
+		"typecheck": "tsc --noEmit -skipLibCheck",
+		"fix": "bun run lint:fix && bun run format",
+		"check": "oxlint --deny-warnings && oxfmt -c .oxfmtrc.jsonc --check . && tsc --noEmit -skipLibCheck",
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
-	},
-	"keywords": [],
-	"license": "MIT",
-	"devDependencies": {
-		"@types/node": "^25.9.8",
-		"esbuild": "0.28.2",
-		"tslib": "2.8.1",
-		"typescript": "^7.0.2"
 	},
 	"dependencies": {
 		"@ai-sdk/anthropic": "^4.0.65",
@@ -25,6 +25,15 @@
 		"ai": "^7.0.116",
 		"obsidian": "latest"
 	},
+	"devDependencies": {
+		"@types/node": "^25.9.8",
+		"esbuild": "0.28.2",
+		"oxfmt": "0.70.0",
+		"oxlint": "1.85.0",
+		"tslib": "2.8.1",
+		"typescript": "^7.0.2"
+	},
+	"packageManager": "bun@1.4.2",
 	"trustedDependencies": [
 		"esbuild"
 	]

@@ -7,15 +7,12 @@ import { FormatCheckPanel } from "../ui/resultsModal";
 
 let isRunning = false;
 
-export function registerCheckFormattingCommand(
-	plugin: MarkdownFormatCheckerPlugin
-): void {
+export function registerCheckFormattingCommand(plugin: MarkdownFormatCheckerPlugin): void {
 	plugin.addCommand({
 		id: "check-formatting",
 		name: "Check formatting of current file",
 		checkCallback: (checking: boolean) => {
-			const view =
-				plugin.app.workspace.getActiveViewOfType(MarkdownView);
+			const view = plugin.app.workspace.getActiveViewOfType(MarkdownView);
 			if (!view) {
 				return false;
 			}
@@ -29,7 +26,7 @@ export function registerCheckFormattingCommand(
 
 async function performFormatCheck(
 	plugin: MarkdownFormatCheckerPlugin,
-	view: MarkdownView
+	view: MarkdownView,
 ): Promise<void> {
 	if (isRunning) {
 		new Notice("A formatting check is already in progress.");
@@ -52,11 +49,7 @@ async function performFormatCheck(
 
 	isRunning = true;
 
-	const prompt = buildFormatCheckPrompt(
-		fileName,
-		fileContent,
-		plugin.settings
-	);
+	const prompt = buildFormatCheckPrompt(fileName, fileContent, plugin.settings);
 
 	const applyCtx: ApplyFixContext = {
 		editor: view.editor,

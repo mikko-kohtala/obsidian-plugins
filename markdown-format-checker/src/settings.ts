@@ -64,7 +64,7 @@ export class MarkdownFormatCheckerSettingTab extends PluginSettingTab {
 						this.plugin.settings.provider = value as "claude" | "gemini" | "moonshot";
 						await this.plugin.saveSettings();
 						this.display();
-					})
+					}),
 			);
 
 		if (isClaude) {
@@ -77,9 +77,7 @@ export class MarkdownFormatCheckerSettingTab extends PluginSettingTab {
 
 			new Setting(containerEl)
 				.setName("Model")
-				.setDesc(
-					"Claude model to use. Haiku is fast and cheap, Sonnet is more capable."
-				)
+				.setDesc("Claude model to use. Haiku is fast and cheap, Sonnet is more capable.")
 				.addDropdown((dropdown) =>
 					dropdown
 						.addOption("claude-haiku-4-5", "Haiku (fast)")
@@ -89,7 +87,7 @@ export class MarkdownFormatCheckerSettingTab extends PluginSettingTab {
 						.onChange(async (value) => {
 							this.plugin.settings.claudeModel = value;
 							await this.plugin.saveSettings();
-						})
+						}),
 				);
 		} else if (this.plugin.settings.provider === "gemini") {
 			this.addSecretSetting(containerEl, {
@@ -111,7 +109,7 @@ export class MarkdownFormatCheckerSettingTab extends PluginSettingTab {
 						.onChange(async (value) => {
 							this.plugin.settings.geminiModel = value;
 							await this.plugin.saveSettings();
-						})
+						}),
 				);
 		} else if (this.plugin.settings.provider === "moonshot") {
 			this.addSecretSetting(containerEl, {
@@ -133,7 +131,7 @@ export class MarkdownFormatCheckerSettingTab extends PluginSettingTab {
 						.onChange(async (value) => {
 							this.plugin.settings.moonshotModel = value;
 							await this.plugin.saveSettings();
-						})
+						}),
 				);
 		}
 
@@ -150,13 +148,13 @@ export class MarkdownFormatCheckerSettingTab extends PluginSettingTab {
 							this.plugin.settings.timeoutMs = parsed * 1000;
 							await this.plugin.saveSettings();
 						}
-					})
+					}),
 			);
 
 		new Setting(containerEl)
 			.setName("Custom prompt additions")
 			.setDesc(
-				"Additional instructions appended to the formatting check prompt. Use this to add custom rules or preferences."
+				"Additional instructions appended to the formatting check prompt. Use this to add custom rules or preferences.",
 			)
 			.addTextArea((text) =>
 				text
@@ -165,30 +163,29 @@ export class MarkdownFormatCheckerSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.customPromptAdditions = value;
 						await this.plugin.saveSettings();
-					})
+					}),
 			);
 
 		new Setting(containerEl)
 			.setName("Debug logs")
-			.setDesc(
-				"Log prompts, messages, and AI responses to the developer console."
-			)
+			.setDesc("Log prompts, messages, and AI responses to the developer console.")
 			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.debugLogs)
-					.onChange(async (value) => {
-						this.plugin.settings.debugLogs = value;
-						await this.plugin.saveSettings();
-					})
+				toggle.setValue(this.plugin.settings.debugLogs).onChange(async (value) => {
+					this.plugin.settings.debugLogs = value;
+					await this.plugin.saveSettings();
+				}),
 			);
 	}
 
-	private addSecretSetting(containerEl: HTMLElement, opts: {
-		name: string;
-		desc: string;
-		placeholder: string;
-		secretId: string;
-	}): void {
+	private addSecretSetting(
+		containerEl: HTMLElement,
+		opts: {
+			name: string;
+			desc: string;
+			placeholder: string;
+			secretId: string;
+		},
+	): void {
 		const existing = this.app.secretStorage.getSecret(opts.secretId);
 		new Setting(containerEl)
 			.setName(opts.name)

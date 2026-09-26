@@ -29,7 +29,12 @@ export class ClipperVerifyPanel {
 	private isBusy = false;
 	private isClosed = false;
 
-	constructor(app: App, fileName: string, initialPrompt: string, verifyCtx: VerifyContext | null = null) {
+	constructor(
+		app: App,
+		fileName: string,
+		initialPrompt: string,
+		verifyCtx: VerifyContext | null = null,
+	) {
 		this.app = app;
 		this.fileName = fileName;
 		this.initialPrompt = initialPrompt;
@@ -251,7 +256,7 @@ export class ClipperVerifyPanel {
 			this.accumulated,
 			this.outputDiv,
 			"",
-			this.renderComponent
+			this.renderComponent,
 		);
 	}
 

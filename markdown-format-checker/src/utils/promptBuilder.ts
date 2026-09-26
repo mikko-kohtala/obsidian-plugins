@@ -4,7 +4,7 @@ export function buildApplyFixPrompt(
 	fileName: string,
 	fileContent: string,
 	checkResults: string,
-	settings: MarkdownFormatCheckerSettings
+	settings: MarkdownFormatCheckerSettings,
 ): string {
 	const basePrompt = `You are a markdown formatting fixer for an Obsidian vault.
 
@@ -48,7 +48,7 @@ ${fileContent}
 export function buildFormatCheckPrompt(
 	fileName: string,
 	fileContent: string,
-	settings: MarkdownFormatCheckerSettings
+	settings: MarkdownFormatCheckerSettings,
 ): string {
 	const basePrompt = `You are a markdown formatting checker for an Obsidian vault.
 

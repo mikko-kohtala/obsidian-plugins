@@ -53,6 +53,10 @@ Output: `main.js` (gitignored). Symlinked from the Obsidian vault at:
 /Users/mikko/notes/.obsidian/plugins/markdown-format-checker -> /Users/mikko/code/obsidian-plugins/markdown-format-checker
 ```
 
+## Validation
+
+Validate all work with `bun check` (lint, format, typecheck) before calling it done. `bun run fix` applies lint/format fixes.
+
 ## Testing
 
 After code changes:

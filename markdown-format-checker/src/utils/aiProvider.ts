@@ -39,7 +39,9 @@ const nodeFetch: typeof globalThis.fetch = (input, init) => {
 		const headers: Record<string, string> = {};
 		if (init?.headers) {
 			if (init.headers instanceof Headers) {
-				init.headers.forEach((v, k) => { headers[k] = v; });
+				init.headers.forEach((v, k) => {
+					headers[k] = v;
+				});
 			} else if (Array.isArray(init.headers)) {
 				for (const [k, v] of init.headers) headers[k] = v;
 			} else {
@@ -48,27 +50,35 @@ const nodeFetch: typeof globalThis.fetch = (input, init) => {
 		}
 
 		const requestFn = url.protocol === "https:" ? httpsRequest : httpRequest;
-		const req = requestFn(url, { method: init?.method ?? "GET", headers }, (res: IncomingMessage) => {
-			const resHeaders = new Headers();
-			for (const [k, v] of Object.entries(res.headers)) {
-				if (v != null) resHeaders.set(k, Array.isArray(v) ? v.join(", ") : v);
-			}
+		const req = requestFn(
+			url,
+			{ method: init?.method ?? "GET", headers },
+			(res: IncomingMessage) => {
+				const resHeaders = new Headers();
+				for (const [k, v] of Object.entries(res.headers)) {
+					if (v != null) resHeaders.set(k, Array.isArray(v) ? v.join(", ") : v);
+				}
 
-			const body = new ReadableStream({
-				start(controller) {
-					res.on("data", (chunk: Buffer) => controller.enqueue(new Uint8Array(chunk)));
-					res.on("end", () => controller.close());
-					res.on("error", (e) => controller.error(e));
-				},
-				cancel() { res.destroy(); },
-			});
+				const body = new ReadableStream({
+					start(controller) {
+						res.on("data", (chunk: Buffer) => controller.enqueue(new Uint8Array(chunk)));
+						res.on("end", () => controller.close());
+						res.on("error", (e) => controller.error(e));
+					},
+					cancel() {
+						res.destroy();
+					},
+				});
 
-			resolve(new Response(body, {
-				status: res.statusCode ?? 200,
-				statusText: res.statusMessage ?? "",
-				headers: resHeaders,
-			}));
-		});
+				resolve(
+					new Response(body, {
+						status: res.statusCode ?? 200,
+						statusText: res.statusMessage ?? "",
+						headers: resHeaders,
+					}),
+				);
+			},
+		);
 
 		req.on("error", reject);
 
@@ -78,10 +88,14 @@ const nodeFetch: typeof globalThis.fetch = (input, init) => {
 				reject(new DOMException("Aborted", "AbortError"));
 				return;
 			}
-			init.signal.addEventListener("abort", () => {
-				req.destroy();
-				reject(new DOMException("Aborted", "AbortError"));
-			}, { once: true });
+			init.signal.addEventListener(
+				"abort",
+				() => {
+					req.destroy();
+					reject(new DOMException("Aborted", "AbortError"));
+				},
+				{ once: true },
+			);
 		}
 
 		if (typeof init?.body === "string") {
@@ -130,7 +144,7 @@ export function runAIStreaming(
 	app: App,
 	prompt: string,
 	settings: MarkdownFormatCheckerSettings,
-	callbacks: StreamCallbacks
+	callbacks: StreamCallbacks,
 ): void {
 	void runSDKStreaming(app, { prompt }, settings, callbacks);
 }
@@ -140,7 +154,7 @@ export function runAIChatStreaming(
 	system: string,
 	messages: ChatMessage[],
 	settings: MarkdownFormatCheckerSettings,
-	callbacks: StreamCallbacks
+	callbacks: StreamCallbacks,
 ): void {
 	void runSDKStreaming(app, { system, messages }, settings, callbacks);
 }
@@ -149,7 +163,7 @@ async function runSDKStreaming(
 	app: App,
 	input: { prompt: string } | { system: string; messages: ChatMessage[] },
 	settings: MarkdownFormatCheckerSettings,
-	callbacks: StreamCallbacks
+	callbacks: StreamCallbacks,
 ): Promise<void> {
 	let thinkingText = "";
 	let outputText = "";
@@ -170,16 +184,23 @@ async function runSDKStreaming(
 			console.log(TAG, "[debug] system prompt:\n", input.system);
 			console.log(TAG, "[debug] messages (" + input.messages.length + "):");
 			for (const msg of input.messages) {
-				console.log(TAG, "[debug]  ", msg.role, "(" + msg.content.length + " chars):", msg.content.slice(0, 200) + (msg.content.length > 200 ? "..." : ""));
+				console.log(
+					TAG,
+					"[debug]  ",
+					msg.role,
+					"(" + msg.content.length + " chars):",
+					msg.content.slice(0, 200) + (msg.content.length > 200 ? "..." : ""),
+				);
 			}
 		}
 	}
 
 	try {
 		const model = createModel(app, settings);
-		const streamOpts = "prompt" in input
-			? { model, prompt: input.prompt, abortSignal: controller.signal }
-			: { model, system: input.system, messages: input.messages, abortSignal: controller.signal };
+		const streamOpts =
+			"prompt" in input
+				? { model, prompt: input.prompt, abortSignal: controller.signal }
+				: { model, system: input.system, messages: input.messages, abortSignal: controller.signal };
 		const result = streamText(streamOpts);
 
 		for await (const part of result.fullStream) {
@@ -195,9 +216,15 @@ async function runSDKStreaming(
 				case "error":
 					throw part.error;
 				case "finish":
-					console.log(TAG, "done |",
-						"output:", outputText.length, "chars |",
-						"tokens:", part.totalUsage?.totalTokens ?? "?");
+					console.log(
+						TAG,
+						"done |",
+						"output:",
+						outputText.length,
+						"chars |",
+						"tokens:",
+						part.totalUsage?.totalTokens ?? "?",
+					);
 					break;
 			}
 		}

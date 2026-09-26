@@ -13,38 +13,23 @@ export default class WebClipperVerifierPlugin extends Plugin {
 	async onload(): Promise<void> {
 		await this.loadSettings();
 
-		this.addRibbonIcon(
-			"clipboard-check",
-			"Verify Web Clipping",
-			() => {
-				const view =
-					this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (!view) {
-					new Notice(
-						"Open a web clipping file to verify it."
-					);
-					return;
-				}
-				(this.app as any).commands.executeCommandById(
-					"web-clipper-verifier:verify-clipping"
-				);
+		this.addRibbonIcon("clipboard-check", "Verify Web Clipping", () => {
+			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+			if (!view) {
+				new Notice("Open a web clipping file to verify it.");
+				return;
 			}
-		);
+			(this.app as any).commands.executeCommandById("web-clipper-verifier:verify-clipping");
+		});
 
 		registerVerifyClippingCommand(this);
 
-		this.addSettingTab(
-			new WebClipperVerifierSettingTab(this.app, this)
-		);
+		this.addSettingTab(new WebClipperVerifierSettingTab(this.app, this));
 	}
 
 	async loadSettings(): Promise<void> {
 		const saved = (await this.loadData()) as Record<string, unknown> | null;
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			saved,
-		) as WebClipperVerifierSettings;
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, saved) as WebClipperVerifierSettings;
 		this.settings.claudeModel = migrateModel(this.settings.claudeModel);
 	}
 

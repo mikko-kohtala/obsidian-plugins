@@ -70,7 +70,7 @@ export class WebClipperVerifierSettingTab extends PluginSettingTab {
 						this.plugin.settings.provider = value as "claude" | "gemini" | "moonshot";
 						await this.plugin.saveSettings();
 						this.display();
-					})
+					}),
 			);
 
 		if (isClaude) {
@@ -83,9 +83,7 @@ export class WebClipperVerifierSettingTab extends PluginSettingTab {
 
 			new Setting(containerEl)
 				.setName("Model")
-				.setDesc(
-					"Claude model to use. Haiku is fast and cheap, Sonnet is more capable."
-				)
+				.setDesc("Claude model to use. Haiku is fast and cheap, Sonnet is more capable.")
 				.addDropdown((dropdown) =>
 					dropdown
 						.addOption("claude-haiku-4-5", "Haiku (fast)")
@@ -95,7 +93,7 @@ export class WebClipperVerifierSettingTab extends PluginSettingTab {
 						.onChange(async (value) => {
 							this.plugin.settings.claudeModel = value;
 							await this.plugin.saveSettings();
-						})
+						}),
 				);
 		} else if (this.plugin.settings.provider === "gemini") {
 			this.addSecretSetting(containerEl, {
@@ -117,7 +115,7 @@ export class WebClipperVerifierSettingTab extends PluginSettingTab {
 						.onChange(async (value) => {
 							this.plugin.settings.geminiModel = value;
 							await this.plugin.saveSettings();
-						})
+						}),
 				);
 		} else if (this.plugin.settings.provider === "moonshot") {
 			this.addSecretSetting(containerEl, {
@@ -139,7 +137,7 @@ export class WebClipperVerifierSettingTab extends PluginSettingTab {
 						.onChange(async (value) => {
 							this.plugin.settings.moonshotModel = value;
 							await this.plugin.saveSettings();
-						})
+						}),
 				);
 		}
 
@@ -158,7 +156,7 @@ export class WebClipperVerifierSettingTab extends PluginSettingTab {
 							this.plugin.settings.fetchTimeoutMs = parsed * 1000;
 							await this.plugin.saveSettings();
 						}
-					})
+					}),
 			);
 
 		new Setting(containerEl)
@@ -174,19 +172,17 @@ export class WebClipperVerifierSettingTab extends PluginSettingTab {
 							this.plugin.settings.maxContentLength = parsed;
 							await this.plugin.saveSettings();
 						}
-					})
+					}),
 			);
 
 		new Setting(containerEl)
 			.setName("User-Agent")
 			.setDesc("User-Agent header sent when fetching source URLs.")
 			.addText((text) =>
-				text
-					.setValue(this.plugin.settings.userAgent)
-					.onChange(async (value) => {
-						this.plugin.settings.userAgent = value;
-						await this.plugin.saveSettings();
-					})
+				text.setValue(this.plugin.settings.userAgent).onChange(async (value) => {
+					this.plugin.settings.userAgent = value;
+					await this.plugin.saveSettings();
+				}),
 			);
 
 		containerEl.createEl("h3", { text: "AI settings" });
@@ -204,14 +200,12 @@ export class WebClipperVerifierSettingTab extends PluginSettingTab {
 							this.plugin.settings.timeoutMs = parsed * 1000;
 							await this.plugin.saveSettings();
 						}
-					})
+					}),
 			);
 
 		new Setting(containerEl)
 			.setName("Custom prompt additions")
-			.setDesc(
-				"Additional instructions appended to the verification prompt."
-			)
+			.setDesc("Additional instructions appended to the verification prompt.")
 			.addTextArea((text) =>
 				text
 					.setPlaceholder("e.g., Focus on code blocks being complete...")
@@ -219,30 +213,29 @@ export class WebClipperVerifierSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.customPromptAdditions = value;
 						await this.plugin.saveSettings();
-					})
+					}),
 			);
 
 		new Setting(containerEl)
 			.setName("Debug logs")
-			.setDesc(
-				"Log prompts, messages, and AI responses to the developer console."
-			)
+			.setDesc("Log prompts, messages, and AI responses to the developer console.")
 			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.debugLogs)
-					.onChange(async (value) => {
-						this.plugin.settings.debugLogs = value;
-						await this.plugin.saveSettings();
-					})
+				toggle.setValue(this.plugin.settings.debugLogs).onChange(async (value) => {
+					this.plugin.settings.debugLogs = value;
+					await this.plugin.saveSettings();
+				}),
 			);
 	}
 
-	private addSecretSetting(containerEl: HTMLElement, opts: {
-		name: string;
-		desc: string;
-		placeholder: string;
-		secretId: string;
-	}): void {
+	private addSecretSetting(
+		containerEl: HTMLElement,
+		opts: {
+			name: string;
+			desc: string;
+			placeholder: string;
+			secretId: string;
+		},
+	): void {
 		const existing = this.app.secretStorage.getSecret(opts.secretId);
 		new Setting(containerEl)
 			.setName(opts.name)

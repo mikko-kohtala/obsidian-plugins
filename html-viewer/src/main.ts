@@ -84,10 +84,7 @@ interface AppWithEmbedRegistry {
 }
 
 function isHtmlFile(file: unknown): file is TFile {
-	return (
-		file instanceof TFile &&
-		HTML_EXTENSIONS.includes(file.extension.toLowerCase())
-	);
+	return file instanceof TFile && HTML_EXTENSIONS.includes(file.extension.toLowerCase());
 }
 
 function isHtmlViewerLeaf(leaf: WorkspaceLeaf | null | undefined): boolean {
@@ -128,10 +125,7 @@ function zoomFromState(value: unknown, fallback = DEFAULT_ZOOM_LEVEL): number {
 }
 
 function clampZoom(value: number): number {
-	const clamped = Math.min(
-		MAX_ZOOM_LEVEL,
-		Math.max(MIN_ZOOM_LEVEL, value),
-	);
+	const clamped = Math.min(MAX_ZOOM_LEVEL, Math.max(MIN_ZOOM_LEVEL, value));
 	return Math.round(clamped * 100) / 100;
 }
 
@@ -308,8 +302,7 @@ class HtmlViewerView extends FileView {
 	async setState(state: unknown, result: ViewStateResult): Promise<void> {
 		if (state && typeof state === "object") {
 			const viewState = state as Record<string, unknown>;
-			const filePath =
-				typeof viewState.file === "string" ? viewState.file : null;
+			const filePath = typeof viewState.file === "string" ? viewState.file : null;
 			const existingLeaf =
 				filePath && this.plugin.settings.dedupeTabs
 					? this.plugin.findOpenHtmlLeaf(filePath, this)
@@ -421,15 +414,10 @@ class HtmlViewerView extends FileView {
 		const viewGroup = toolbarEl.createDiv({
 			cls: "html-viewer-toolbar-group",
 		});
-		this.sourceButton = makeToolbarButton(
-			viewGroup,
-			"code-xml",
-			"Source",
-			() => {
-				this.state.sourceMode = !this.state.sourceMode;
-				void this.renderFile();
-			},
-		);
+		this.sourceButton = makeToolbarButton(viewGroup, "code-xml", "Source", () => {
+			this.state.sourceMode = !this.state.sourceMode;
+			void this.renderFile();
+		});
 
 		const zoomGroup = toolbarEl.createDiv({
 			cls: "html-viewer-toolbar-group",
@@ -443,14 +431,9 @@ class HtmlViewerView extends FileView {
 			},
 			{ showLabel: false },
 		);
-		this.zoomResetButton = makeToolbarButton(
-			zoomGroup,
-			"rotate-ccw",
-			"Reset Zoom",
-			() => {
-				this.setZoom(DEFAULT_ZOOM_LEVEL);
-			},
-		);
+		this.zoomResetButton = makeToolbarButton(zoomGroup, "rotate-ccw", "Reset Zoom", () => {
+			this.setZoom(DEFAULT_ZOOM_LEVEL);
+		});
 		this.zoomResetButton.addClass("html-viewer-zoom-reset");
 		this.zoomInButton = makeToolbarButton(
 			zoomGroup,
@@ -465,24 +448,14 @@ class HtmlViewerView extends FileView {
 		const securityGroup = toolbarEl.createDiv({
 			cls: "html-viewer-toolbar-group",
 		});
-		this.scriptButton = makeToolbarButton(
-			securityGroup,
-			"play",
-			"Scripts",
-			() => {
-				this.state.scriptsEnabled = !this.state.scriptsEnabled;
-				void this.renderFile();
-			},
-		);
-		this.trustedButton = makeToolbarButton(
-			securityGroup,
-			"shield-alert",
-			"Trusted",
-			() => {
-				this.state.trustedAppMode = !this.state.trustedAppMode;
-				void this.renderFile();
-			},
-		);
+		this.scriptButton = makeToolbarButton(securityGroup, "play", "Scripts", () => {
+			this.state.scriptsEnabled = !this.state.scriptsEnabled;
+			void this.renderFile();
+		});
+		this.trustedButton = makeToolbarButton(securityGroup, "shield-alert", "Trusted", () => {
+			this.state.trustedAppMode = !this.state.trustedAppMode;
+			void this.renderFile();
+		});
 
 		const actionGroup = toolbarEl.createDiv({
 			cls: "html-viewer-toolbar-group",
@@ -501,31 +474,17 @@ class HtmlViewerView extends FileView {
 			?.querySelector("span")
 			?.setText(this.state.sourceMode ? "Rendered" : "Source");
 
-		this.zoomOutButton?.toggleClass(
-			"is-disabled",
-			this.state.zoomLevel <= MIN_ZOOM_LEVEL,
-		);
-		this.zoomInButton?.toggleClass(
-			"is-disabled",
-			this.state.zoomLevel >= MAX_ZOOM_LEVEL,
-		);
-		this.zoomResetButton
-			?.querySelector("span")
-			?.setText(formatZoom(this.state.zoomLevel));
-		this.zoomResetButton?.toggleClass(
-			"is-active",
-			this.state.zoomLevel !== DEFAULT_ZOOM_LEVEL,
-		);
+		this.zoomOutButton?.toggleClass("is-disabled", this.state.zoomLevel <= MIN_ZOOM_LEVEL);
+		this.zoomInButton?.toggleClass("is-disabled", this.state.zoomLevel >= MAX_ZOOM_LEVEL);
+		this.zoomResetButton?.querySelector("span")?.setText(formatZoom(this.state.zoomLevel));
+		this.zoomResetButton?.toggleClass("is-active", this.state.zoomLevel !== DEFAULT_ZOOM_LEVEL);
 
 		this.scriptButton?.toggleClass("is-active", this.state.scriptsEnabled);
 		this.scriptButton
 			?.querySelector("span")
 			?.setText(this.state.scriptsEnabled ? "Scripts On" : "Scripts Off");
 
-		this.trustedButton?.toggleClass(
-			"is-active",
-			this.state.trustedAppMode,
-		);
+		this.trustedButton?.toggleClass("is-active", this.state.trustedAppMode);
 		this.trustedButton?.toggleClass(
 			"is-warning",
 			this.state.trustedAppMode && this.state.scriptsEnabled,
@@ -597,11 +556,7 @@ class HtmlViewerView extends FileView {
 			return;
 		}
 
-		const renderedHtml = await this.plugin.prepareHtmlForRender(
-			file,
-			html,
-			this.state.zoomLevel,
-		);
+		const renderedHtml = await this.plugin.prepareHtmlForRender(file, html, this.state.zoomLevel);
 		const iframe = this.renderEl.ownerDocument.createElement("iframe");
 		iframe.className = "html-viewer-iframe";
 		iframe.title = file.name;
@@ -659,10 +614,7 @@ class HtmlViewerView extends FileView {
 						return;
 					}
 
-					const path = resolveVaultHref(
-						sourceFile.path,
-						anchor.getAttribute("href") ?? "",
-					);
+					const path = resolveVaultHref(sourceFile.path, anchor.getAttribute("href") ?? "");
 					if (!path) {
 						return;
 					}
@@ -710,8 +662,7 @@ class HtmlViewerView extends FileView {
 
 	private showError(error: unknown): void {
 		this.renderEl?.empty();
-		const message =
-			error instanceof Error ? error.message : "Unable to render HTML file.";
+		const message = error instanceof Error ? error.message : "Unable to render HTML file.";
 		this.renderEl?.createDiv({
 			cls: "html-viewer-message",
 			text: message,
@@ -784,9 +735,7 @@ class HtmlViewerEmbed extends Component {
 		this.containerEl.empty();
 		this.containerEl.addClass("html-viewer-embed");
 		this.containerEl.setCssProps({
-			"--html-viewer-embed-width": /^\d+$/.test(width)
-				? `${width}px`
-				: width,
+			"--html-viewer-embed-width": /^\d+$/.test(width) ? `${width}px` : width,
 			"--html-viewer-embed-height": `${height}px`,
 		});
 
@@ -795,10 +744,7 @@ class HtmlViewerEmbed extends Component {
 			html = await this.plugin.app.vault.cachedRead(this.file);
 		} catch (error) {
 			if (!this.unloaded && version === this.renderVersion) {
-				const message =
-					error instanceof Error
-						? error.message
-						: "Unable to render HTML file.";
+				const message = error instanceof Error ? error.message : "Unable to render HTML file.";
 				this.containerEl.createDiv({
 					cls: "html-viewer-message",
 					text: message,
@@ -814,10 +760,7 @@ class HtmlViewerEmbed extends Component {
 		const iframe = this.containerEl.ownerDocument.createElement("iframe");
 		iframe.className = "html-viewer-iframe";
 		iframe.title = this.file.name;
-		iframe.setAttribute(
-			"sandbox",
-			this.plugin.getDefaultSandboxPolicy(),
-		);
+		iframe.setAttribute("sandbox", this.plugin.getDefaultSandboxPolicy());
 		iframe.srcdoc = await this.plugin.prepareHtmlForRender(this.file, html);
 		this.containerEl.appendChild(iframe);
 	}
@@ -868,10 +811,7 @@ export default class HtmlViewerPlugin extends Plugin {
 		this.settings = {
 			...DEFAULT_SETTINGS,
 			...saved,
-			embedHeight: parsePositiveInteger(
-				saved?.embedHeight,
-				DEFAULT_SETTINGS.embedHeight,
-			),
+			embedHeight: parsePositiveInteger(saved?.embedHeight, DEFAULT_SETTINGS.embedHeight),
 		};
 	}
 
@@ -886,10 +826,7 @@ export default class HtmlViewerPlugin extends Plugin {
 			permissions.push("allow-scripts");
 		}
 
-		if (
-			!this.settings.defaultScriptsEnabled ||
-			this.settings.defaultTrustedAppMode
-		) {
+		if (!this.settings.defaultScriptsEnabled || this.settings.defaultTrustedAppMode) {
 			permissions.push("allow-same-origin");
 		}
 
@@ -903,9 +840,7 @@ export default class HtmlViewerPlugin extends Plugin {
 	getResourceBaseHref(file: TFile): string {
 		const parentPath = getParentPath(file.path);
 		const folderPath = parentPath ? `${parentPath}/` : "/";
-		return withoutQueryAndHash(
-			this.app.vault.adapter.getResourcePath(folderPath),
-		);
+		return withoutQueryAndHash(this.app.vault.adapter.getResourcePath(folderPath));
 	}
 
 	async prepareHtmlForRender(
@@ -923,13 +858,8 @@ export default class HtmlViewerPlugin extends Plugin {
 		return `${getDocumentPrefix(html)}\n${doc.documentElement.outerHTML}`;
 	}
 
-	private async inlineLocalStylesheets(
-		sourceFile: TFile,
-		doc: Document,
-	): Promise<void> {
-		const links = Array.from(
-			doc.querySelectorAll<HTMLLinkElement>("link[href]"),
-		);
+	private async inlineLocalStylesheets(sourceFile: TFile, doc: Document): Promise<void> {
+		const links = Array.from(doc.querySelectorAll<HTMLLinkElement>("link[href]"));
 
 		for (const link of links) {
 			if (!link.rel.toLowerCase().split(/\s+/).includes("stylesheet")) {
@@ -953,13 +883,8 @@ export default class HtmlViewerPlugin extends Plugin {
 		}
 	}
 
-	private async inlineLocalScripts(
-		sourceFile: TFile,
-		doc: Document,
-	): Promise<void> {
-		const scripts = Array.from(
-			doc.querySelectorAll<HTMLScriptElement>("script[src]"),
-		);
+	private async inlineLocalScripts(sourceFile: TFile, doc: Document): Promise<void> {
+		const scripts = Array.from(doc.querySelectorAll<HTMLScriptElement>("script[src]"));
 
 		for (const script of scripts) {
 			const linkedFile = this.getLinkedVaultFile(
@@ -993,10 +918,7 @@ export default class HtmlViewerPlugin extends Plugin {
 			return null;
 		}
 
-		if (
-			requiredExtension &&
-			linkedFile.extension.toLowerCase() !== requiredExtension
-		) {
+		if (requiredExtension && linkedFile.extension.toLowerCase() !== requiredExtension) {
 			return null;
 		}
 
@@ -1039,10 +961,7 @@ export default class HtmlViewerPlugin extends Plugin {
 	}
 
 	updateActiveViewClass(): void {
-		document.body.toggleClass(
-			"html-viewer-active",
-			this.hasVisibleHtmlViewerLeaf(),
-		);
+		document.body.toggleClass("html-viewer-active", this.hasVisibleHtmlViewerLeaf());
 	}
 
 	private hasVisibleHtmlViewerLeaf(): boolean {
@@ -1088,8 +1007,7 @@ export default class HtmlViewerPlugin extends Plugin {
 	}
 
 	private registerHtmlEmbeds(): void {
-		const embedRegistry = (this.app as unknown as AppWithEmbedRegistry)
-			.embedRegistry;
+		const embedRegistry = (this.app as unknown as AppWithEmbedRegistry).embedRegistry;
 		if (!embedRegistry) {
 			return;
 		}
@@ -1119,10 +1037,7 @@ export default class HtmlViewerPlugin extends Plugin {
 				}
 
 				this.app.workspace.iterateAllLeaves((leaf) => {
-					if (
-						leaf.view instanceof HtmlViewerView &&
-						leaf.view.file?.path === file.path
-					) {
+					if (leaf.view instanceof HtmlViewerView && leaf.view.file?.path === file.path) {
 						leaf.view.showDeleted(file);
 					}
 				});
@@ -1170,9 +1085,7 @@ export default class HtmlViewerPlugin extends Plugin {
 			return;
 		}
 
-		const existingLeaf = this.settings.dedupeTabs
-			? this.findOpenHtmlLeaf(activeFile.path)
-			: null;
+		const existingLeaf = this.settings.dedupeTabs ? this.findOpenHtmlLeaf(activeFile.path) : null;
 		if (existingLeaf) {
 			this.app.workspace.revealLeaf(existingLeaf);
 			return;
@@ -1186,7 +1099,6 @@ export default class HtmlViewerPlugin extends Plugin {
 		});
 		this.app.workspace.revealLeaf(leaf);
 	}
-
 }
 
 class HtmlViewerSettingTab extends PluginSettingTab {
@@ -1206,73 +1118,65 @@ class HtmlViewerSettingTab extends PluginSettingTab {
 			.setName("Show toolbar")
 			.setDesc("Show source, script, trusted mode, and refresh controls.")
 			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.showToolbar)
-					.onChange(async (value) => {
-						this.plugin.settings.showToolbar = value;
-						await this.plugin.saveSettings();
-						await this.plugin.refreshOpenHtmlDocuments();
-					}),
+				toggle.setValue(this.plugin.settings.showToolbar).onChange(async (value) => {
+					this.plugin.settings.showToolbar = value;
+					await this.plugin.saveSettings();
+					await this.plugin.refreshOpenHtmlDocuments();
+				}),
 			);
 
 		new Setting(containerEl)
 			.setName("Open one tab per HTML file")
 			.setDesc("Focus an existing tab when the same HTML file is opened again.")
 			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.dedupeTabs)
-					.onChange(async (value) => {
-						this.plugin.settings.dedupeTabs = value;
-						await this.plugin.saveSettings();
-					}),
+				toggle.setValue(this.plugin.settings.dedupeTabs).onChange(async (value) => {
+					this.plugin.settings.dedupeTabs = value;
+					await this.plugin.saveSettings();
+				}),
 			);
 
 		new Setting(containerEl)
 			.setName("Default source mode")
 			.setDesc("Open HTML files as source instead of rendered pages.")
 			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.defaultSourceMode)
-					.onChange(async (value) => {
-						this.plugin.settings.defaultSourceMode = value;
-						await this.plugin.saveSettings();
-					}),
+				toggle.setValue(this.plugin.settings.defaultSourceMode).onChange(async (value) => {
+					this.plugin.settings.defaultSourceMode = value;
+					await this.plugin.saveSettings();
+				}),
 			);
 
 		new Setting(containerEl)
 			.setName("Default scripts")
-			.setDesc("Allow JavaScript by default. Keep this off unless most HTML files in the vault are trusted.")
+			.setDesc(
+				"Allow JavaScript by default. Keep this off unless most HTML files in the vault are trusted.",
+			)
 			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.defaultScriptsEnabled)
-					.onChange(async (value) => {
-						this.plugin.settings.defaultScriptsEnabled = value;
-						await this.plugin.saveSettings();
-					}),
+				toggle.setValue(this.plugin.settings.defaultScriptsEnabled).onChange(async (value) => {
+					this.plugin.settings.defaultScriptsEnabled = value;
+					await this.plugin.saveSettings();
+				}),
 			);
 
 		new Setting(containerEl)
 			.setName("Default trusted app mode")
-			.setDesc("Adds same-origin, form, popup, and download sandbox permissions. Use only for HTML you control.")
+			.setDesc(
+				"Adds same-origin, form, popup, and download sandbox permissions. Use only for HTML you control.",
+			)
 			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.defaultTrustedAppMode)
-					.onChange(async (value) => {
-						this.plugin.settings.defaultTrustedAppMode = value;
-						await this.plugin.saveSettings();
-					}),
+				toggle.setValue(this.plugin.settings.defaultTrustedAppMode).onChange(async (value) => {
+					this.plugin.settings.defaultTrustedAppMode = value;
+					await this.plugin.saveSettings();
+				}),
 			);
 
 		new Setting(containerEl)
 			.setName("Refresh when sibling assets change")
 			.setDesc("Reload open HTML viewers when nearby CSS, JS, image, or data files change.")
 			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.watchSiblingAssets)
-					.onChange(async (value) => {
-						this.plugin.settings.watchSiblingAssets = value;
-						await this.plugin.saveSettings();
-					}),
+				toggle.setValue(this.plugin.settings.watchSiblingAssets).onChange(async (value) => {
+					this.plugin.settings.watchSiblingAssets = value;
+					await this.plugin.saveSettings();
+				}),
 			);
 
 		new Setting(containerEl)

@@ -10,15 +10,12 @@ const TAG = "[clipper-verifier]";
 
 let isRunning = false;
 
-export function registerVerifyClippingCommand(
-	plugin: WebClipperVerifierPlugin
-): void {
+export function registerVerifyClippingCommand(plugin: WebClipperVerifierPlugin): void {
 	plugin.addCommand({
 		id: "verify-clipping",
 		name: "Verify clipping against source",
 		checkCallback: (checking: boolean) => {
-			const view =
-				plugin.app.workspace.getActiveViewOfType(MarkdownView);
+			const view = plugin.app.workspace.getActiveViewOfType(MarkdownView);
 			if (!view) {
 				return false;
 			}
@@ -30,7 +27,9 @@ export function registerVerifyClippingCommand(
 	});
 }
 
-function extractFrontmatter(content: string): { yaml: Record<string, unknown>; body: string } | null {
+function extractFrontmatter(
+	content: string,
+): { yaml: Record<string, unknown>; body: string } | null {
 	const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
 	if (!match) return null;
 
@@ -70,7 +69,7 @@ function getSourceUrl(yaml: Record<string, unknown>): string | null {
 
 async function performVerification(
 	plugin: WebClipperVerifierPlugin,
-	view: MarkdownView
+	view: MarkdownView,
 ): Promise<void> {
 	if (isRunning) {
 		new Notice("A verification is already in progress.");
@@ -100,7 +99,9 @@ async function performVerification(
 
 	const sourceUrl = getSourceUrl(parsed.yaml);
 	if (!sourceUrl) {
-		new Notice("No 'source' URL found in frontmatter. This file doesn't appear to be a web clipping.");
+		new Notice(
+			"No 'source' URL found in frontmatter. This file doesn't appear to be a web clipping.",
+		);
 		return;
 	}
 
