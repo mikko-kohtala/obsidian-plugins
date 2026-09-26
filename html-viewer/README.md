@@ -22,8 +22,8 @@ Trusted app mode is intentionally separate. Use it only for HTML you control. It
 1. Build the plugin:
 
 ```bash
-pnpm install
-pnpm run build
+bun install
+bun run build
 ```
 
 2. Install it into the vault using the local plugin ID:

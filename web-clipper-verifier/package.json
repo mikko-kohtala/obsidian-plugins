@@ -4,6 +4,7 @@
 	"description": "Verify that Obsidian Web Clipper content is complete by comparing against the original source URL.",
 	"main": "main.js",
 	"type": "module",
+	"packageManager": "bun@1.4.2",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
@@ -12,18 +13,21 @@
 	"keywords": [],
 	"license": "MIT",
 	"devDependencies": {
-		"@types/node": "^16.11.6",
-		"esbuild": "0.25.5",
-		"tslib": "2.4.0",
-		"typescript": "^5.8.3"
+		"@types/node": "^25.9.8",
+		"esbuild": "0.28.2",
+		"tslib": "2.8.1",
+		"typescript": "^7.0.2"
 	},
 	"dependencies": {
-		"@ai-sdk/anthropic": "^3.0.45",
-		"@ai-sdk/google": "^3.0.29",
-		"@ai-sdk/moonshotai": "^2.0.5",
-		"@mozilla/readability": "^0.5.0",
-		"ai": "^6.0.91",
-		"linkedom": "^0.18.9",
+		"@ai-sdk/anthropic": "^4.0.65",
+		"@ai-sdk/google": "^4.0.82",
+		"@ai-sdk/moonshotai": "^3.0.58",
+		"@mozilla/readability": "^0.6.0",
+		"ai": "^7.0.116",
+		"linkedom": "^0.18.13",
 		"obsidian": "latest"
-	}
+	},
+	"trustedDependencies": [
+		"esbuild"
+	]
 }

@@ -90,11 +90,11 @@ export async function extractFromUrl(
 	console.log(TAG, "extracted:", textContent.length, "chars |", "title:", article.title);
 
 	return {
-		title: article.title,
+		title: article.title ?? "",
 		textContent,
-		byline: article.byline,
-		excerpt: article.excerpt,
-		length: article.length,
+		byline: article.byline ?? null,
+		excerpt: article.excerpt ?? null,
+		length: article.length ?? article.textContent.length,
 		truncated,
 	};
 }
