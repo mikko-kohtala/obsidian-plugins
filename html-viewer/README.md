@@ -30,7 +30,7 @@ bun run build
 
 ```bash
 mkdir -p /Users/mikko/obsidian/.obsidian/plugins
-ln -sfn /Users/mikko/code/obsidian-plugins/html-viewer /Users/mikko/obsidian/.obsidian/plugins/mikko-html-viewer
+ln -sfn /Users/mikko/code/mikko/obsidian-plugins/html-viewer /Users/mikko/obsidian/.obsidian/plugins/mikko-html-viewer
 ```
 
 3. Enable `HTML Viewer` in Obsidian Community Plugins.
