@@ -28,7 +28,7 @@
 		"obsidian": "latest"
 	},
 	"devDependencies": {
-		"@types/node": "^25.9.8",
+		"@types/node": "^24.19.0",
 		"esbuild": "0.28.2",
 		"oxfmt": "0.70.0",
 		"oxlint": "1.85.0",

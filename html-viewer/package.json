@@ -22,7 +22,7 @@
 		"check": "oxlint --deny-warnings && oxfmt -c .oxfmtrc.jsonc --check . && tsc --noEmit -skipLibCheck"
 	},
 	"devDependencies": {
-		"@types/node": "^25.9.8",
+		"@types/node": "^24.13.6",
 		"esbuild": "0.28.2",
 		"obsidian": "latest",
 		"oxfmt": "0.70.0",
