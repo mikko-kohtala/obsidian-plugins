@@ -4,6 +4,7 @@
 	"description": "Verify that Obsidian Web Clipper content is complete by comparing against the original source URL.",
 	"main": "main.js",
 	"type": "module",
+	"packageManager": "bun@1.4.2",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
@@ -25,5 +26,8 @@
 		"ai": "^6.0.91",
 		"linkedom": "^0.18.9",
 		"obsidian": "latest"
-	}
+	},
+	"trustedDependencies": [
+		"esbuild"
+	]
 }

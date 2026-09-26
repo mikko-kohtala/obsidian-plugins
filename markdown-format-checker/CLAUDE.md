@@ -43,9 +43,9 @@ src/
 ## Build & dev
 
 ```bash
-pnpm install
-pnpm run dev      # watch mode
-pnpm run build    # production build
+bun install
+bun run dev      # watch mode
+bun run build    # production build
 ```
 
 Output: `main.js` (gitignored). Symlinked from the Obsidian vault at:
@@ -57,7 +57,7 @@ Output: `main.js` (gitignored). Symlinked from the Obsidian vault at:
 
 After code changes:
 ```bash
-pnpm run build
+bun run build
 obsidian plugin:reload id=markdown-format-checker
 obsidian dev:console level=error    # check for errors
 ```
