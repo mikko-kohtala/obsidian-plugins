@@ -1,0 +1,9 @@
+{
+	"id": "mikko-print-note",
+	"name": "Print Note",
+	"version": "1.0.0",
+	"minAppVersion": "1.4.0",
+	"description": "Print the current note with one click: renders it as a clean PDF and opens the macOS print dialog.",
+	"author": "Mikko Kohtala",
+	"isDesktopOnly": true
+}
