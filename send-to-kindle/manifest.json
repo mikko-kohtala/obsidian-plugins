@@ -1,0 +1,9 @@
+{
+	"id": "mikko-send-to-kindle",
+	"name": "Send to Kindle",
+	"version": "1.0.0",
+	"minAppVersion": "1.4.0",
+	"description": "Send the current note to a Kindle as a properly typeset article, by email or over USB, using the kindle-epub tools.",
+	"author": "Mikko Kohtala",
+	"isDesktopOnly": true
+}

@@ -1,0 +1,9 @@
+{
+	"id": "mikko-fix-markdown",
+	"name": "Fix Markdown",
+	"version": "1.0.0",
+	"minAppVersion": "1.4.0",
+	"description": "Fix a clipped note with one click: runs the vault's fix-markdown-file skill through the local Claude Code CLI.",
+	"author": "Mikko Kohtala",
+	"isDesktopOnly": true
+}

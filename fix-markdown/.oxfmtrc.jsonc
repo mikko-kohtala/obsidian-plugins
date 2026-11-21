@@ -1,0 +1,6 @@
+{
+	"$schema": "./node_modules/oxfmt/configuration_schema.json",
+	"useTabs": true,
+	// main.js is the esbuild bundle; Markdown is prose whose padded tables must not churn on a cell edit.
+	"ignorePatterns": ["main.js", "**/*.md"],
+}
