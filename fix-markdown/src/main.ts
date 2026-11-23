@@ -283,6 +283,7 @@ export default class FixMarkdownPlugin extends Plugin {
 				systemPrompt: buildSystemPrompt(dryRun, confirmedProtected),
 				permissionMode: this.settings.permissionMode,
 				model: this.settings.model,
+				effort: this.settings.effort,
 				timeoutMs: this.settings.timeoutMinutes * 60_000,
 			},
 			(kind, text) => {

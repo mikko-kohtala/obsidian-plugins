@@ -1,6 +1,20 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
-import type { PermissionMode } from "./claude";
+import { EFFORTS, type Effort, type PermissionMode } from "./claude";
 import type FixMarkdownPlugin from "./main";
+
+/**
+ * Models offered in the dropdown, as full model ids so a fix always runs on the
+ * same model. An empty id means Claude Code's own default. Anything else is
+ * typed in under "Custom…".
+ */
+const MODELS: { id: string; label: string }[] = [
+	{ id: "claude-opus-5-5", label: "Opus 5.5" },
+	{ id: "claude-fable-5-2", label: "Fable 5.2" },
+	{ id: "claude-sonnet-5-5", label: "Sonnet 5.5" },
+	{ id: "claude-haiku-5-5", label: "Haiku 5.5" },
+	{ id: "", label: "Claude Code's default" },
+];
+const CUSTOM = "custom";
 
 /** When the report panel opens: as the fix starts, when it ends, or only from the notice. */
 export type ShowReport = "start" | "finish" | "notice";
@@ -11,7 +25,10 @@ export interface FixMarkdownSettings {
 	/** Name of the skill in the vault's .claude/skills. */
 	skill: string;
 	permissionMode: PermissionMode;
+	/** Model id or alias; empty = Claude Code's default. */
 	model: string;
+	/** Empty = Claude Code's default. */
+	effort: Effort | "";
 	timeoutMinutes: number;
 	/** Notes under these folders ask before a fix (one folder per line). */
 	confirmFolders: string;
@@ -27,7 +44,8 @@ export const DEFAULT_SETTINGS: FixMarkdownSettings = {
 	claudePath: "~/.local/bin/claude",
 	skill: "fix-markdown-file",
 	permissionMode: "auto",
-	model: "",
+	model: "claude-opus-5-5",
+	effort: "medium",
 	timeoutMinutes: 20,
 	confirmFolders: "wiki/sources/",
 	confirmExceptions: "wiki/sources/_unsorted/",
@@ -46,6 +64,8 @@ export function folderList(value: string): string[] {
 
 export class FixMarkdownSettingTab extends PluginSettingTab {
 	plugin: FixMarkdownPlugin;
+	/** "Custom…" was picked, so show the text box even before anything is typed. */
+	private customModel = false;
 
 	constructor(app: App, plugin: FixMarkdownPlugin) {
 		super(app, plugin);
@@ -90,6 +110,59 @@ export class FixMarkdownSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}),
 			);
+
+		const listed = MODELS.some((model) => model.id === settings.model);
+		const custom = this.customModel || !listed;
+		new Setting(containerEl)
+			.setName("Model")
+			.setDesc("The Claude model that does the fix.")
+			.addDropdown((dropdown) => {
+				for (const model of MODELS) dropdown.addOption(model.id, model.label);
+				dropdown
+					.addOption(CUSTOM, "Custom…")
+					.setValue(custom ? CUSTOM : settings.model)
+					.onChange(async (value) => {
+						this.customModel = value === CUSTOM;
+						if (value !== CUSTOM) {
+							settings.model = value;
+							await this.plugin.saveSettings();
+						}
+						this.display();
+					});
+			});
+
+		if (custom) {
+			new Setting(containerEl)
+				.setName("Custom model")
+				.setDesc(
+					"A model id such as claude-opus-5-5, or an alias such as opus, which always means the newest Opus.",
+				)
+				.addText((text) =>
+					text
+						.setPlaceholder("claude-opus-5-5")
+						.setValue(listed ? "" : settings.model)
+						.onChange(async (value) => {
+							settings.model = value.trim();
+							await this.plugin.saveSettings();
+						}),
+				);
+		}
+
+		new Setting(containerEl)
+			.setName("Reasoning effort")
+			.setDesc(
+				"How hard the model thinks before acting. Higher is slower and uses more of your plan.",
+			)
+			.addDropdown((dropdown) => {
+				for (const effort of EFFORTS) dropdown.addOption(effort, effort);
+				dropdown
+					.addOption("", "Claude Code's default")
+					.setValue(settings.effort)
+					.onChange(async (value) => {
+						settings.effort = value as Effort | "";
+						await this.plugin.saveSettings();
+					});
+			});
 
 		new Setting(containerEl)
 			.setName("Button in the note header")
@@ -156,19 +229,6 @@ export class FixMarkdownSettingTab extends PluginSettingTab {
 					.setValue(settings.skill)
 					.onChange(async (value) => {
 						settings.skill = value.trim() || DEFAULT_SETTINGS.skill;
-						await this.plugin.saveSettings();
-					}),
-			);
-
-		new Setting(containerEl)
-			.setName("Model")
-			.setDesc("Leave empty for Claude Code's default. Otherwise an alias such as opus or sonnet.")
-			.addText((text) =>
-				text
-					.setPlaceholder("default")
-					.setValue(settings.model)
-					.onChange(async (value) => {
-						settings.model = value.trim();
 						await this.plugin.saveSettings();
 					}),
 			);

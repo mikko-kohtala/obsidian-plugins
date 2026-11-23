@@ -8,6 +8,10 @@ import { basename, join } from "path";
 /** "plan" is a dry run: Claude reads and reports, and changes nothing. */
 export type PermissionMode = "auto" | "acceptEdits" | "plan";
 
+/** Reasoning effort levels `claude --effort` accepts. */
+export const EFFORTS = ["low", "medium", "high", "xhigh", "max"] as const;
+export type Effort = (typeof EFFORTS)[number];
+
 export interface ClaudeOptions {
 	/** Path to the claude binary. */
 	claudePath: string;
@@ -21,6 +25,8 @@ export interface ClaudeOptions {
 	permissionMode: PermissionMode;
 	/** Empty = Claude Code's default model. */
 	model: string;
+	/** Empty = Claude Code's default effort. */
+	effort: Effort | "";
 	timeoutMs: number;
 }
 
@@ -143,6 +149,7 @@ export function runClaude(
 		options.systemPrompt,
 	];
 	if (options.model.trim()) args.push("--model", options.model.trim());
+	if (options.effort) args.push("--effort", options.effort);
 
 	const child = spawn(claudePath, args, {
 		cwd: options.cwd,

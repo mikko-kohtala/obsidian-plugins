@@ -20,8 +20,13 @@ URL it was clipped from.
 
    ```
    claude -p '/fix-markdown-file "<note path>" <source url>' \
-     --output-format stream-json --verbose --permission-mode auto
+     --output-format stream-json --verbose --permission-mode auto \
+     --model claude-opus-5-5 --effort medium
    ```
+
+   *Model* and *Reasoning effort* in settings pick the last two flags
+   (default Opus 5.5, medium). Either can be set to Claude Code's own
+   default, and *Custom…* takes any model id or alias.
 
 4. Opens the **Fix report** panel in the right sidebar and follows the run
    live: what Claude says it found, and each action it takes (reading, running
