@@ -8,9 +8,144 @@
 .fix-markdown-muted {
 	color: var(--text-muted);
 }
-.fix-markdown-picker {
-	width: 100%;
+
+/* this session's runs */
+.fix-markdown-runs {
 	margin-bottom: var(--size-4-3);
+	padding-bottom: var(--size-4-2);
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+.fix-markdown-runs > summary {
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	padding: var(--size-2-2) 0;
+	color: var(--text-muted);
+	font-weight: var(--font-semibold);
+	list-style: none;
+}
+.fix-markdown-runs > summary::-webkit-details-marker {
+	display: none;
+}
+.fix-markdown-runs > summary::before {
+	content: "▸";
+	font-size: 0.8em;
+	transition: transform 120ms ease-out;
+}
+.fix-markdown-runs[open] > summary::before {
+	transform: rotate(90deg);
+}
+.fix-markdown-runs-count {
+	margin-left: auto;
+	padding: 0 6px;
+	border-radius: var(--radius-l);
+	background: var(--background-modifier-hover);
+	font-weight: var(--font-normal);
+	font-size: var(--font-ui-smaller);
+	font-variant-numeric: tabular-nums;
+}
+.fix-markdown-runs-list {
+	max-height: 14.5em;
+	overflow-y: auto;
+	margin: var(--size-2-1) calc(-1 * var(--size-2-3)) 0;
+}
+.fix-markdown-run {
+	display: flex;
+	align-items: baseline;
+	gap: var(--size-4-2);
+	padding: var(--size-2-2) var(--size-2-3);
+	border-radius: var(--radius-s);
+	cursor: pointer;
+}
+.fix-markdown-run:hover {
+	background: var(--background-modifier-hover);
+}
+.fix-markdown-run.is-active {
+	background: var(--background-modifier-active-hover);
+}
+.fix-markdown-run:focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: -2px;
+}
+.fix-markdown-dot {
+	flex: none;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--text-faint);
+	transform: translateY(-1px);
+}
+.fix-markdown-dot-running {
+	background: var(--interactive-accent);
+	animation: fix-markdown-pulse 1.5s ease-in-out infinite;
+}
+.fix-markdown-dot-done {
+	background: var(--color-green);
+}
+.fix-markdown-dot-failed {
+	background: var(--color-red);
+}
+.fix-markdown-dot-dry {
+	background: var(--color-blue);
+}
+.fix-markdown-run-main {
+	flex: 1;
+	min-width: 0;
+}
+.fix-markdown-run-top {
+	display: flex;
+	gap: var(--size-4-2);
+}
+.fix-markdown-run-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--text-normal);
+}
+.fix-markdown-run-time {
+	flex: none;
+	color: var(--text-faint);
+	font-variant-numeric: tabular-nums;
+}
+.fix-markdown-run-detail {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+}
+
+/* the wand in a note's header and the status bar, while a fix runs */
+.clickable-icon.fix-markdown-busy {
+	color: var(--interactive-accent);
+}
+.clickable-icon.fix-markdown-busy svg {
+	animation: fix-markdown-pulse 1.5s ease-in-out infinite;
+}
+.fix-markdown-statusbar {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-2-2);
+}
+.fix-markdown-statusbar-icon {
+	display: inline-flex;
+	color: var(--interactive-accent);
+	animation: fix-markdown-pulse 1.5s ease-in-out infinite;
+}
+.fix-markdown-statusbar-icon svg {
+	width: 12px;
+	height: 12px;
+}
+@media (prefers-reduced-motion: reduce) {
+	.fix-markdown-dot-running,
+	.fix-markdown-status-running,
+	.clickable-icon.fix-markdown-busy svg,
+	.fix-markdown-statusbar-icon {
+		animation: none;
+	}
 }
 
 .fix-markdown-header {
@@ -158,6 +293,11 @@
 	gap: var(--size-4-2);
 	padding: 2px 0;
 	overflow-wrap: anywhere;
+}
+.fix-markdown-maybe {
+	flex: none;
+	color: var(--text-faint);
+	font-style: italic;
 }
 .fix-markdown-file-kind {
 	flex: none;

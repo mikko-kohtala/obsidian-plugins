@@ -1,4 +1,12 @@
-import { FileSystemAdapter, MarkdownView, Notice, Plugin, TAbstractFile, TFile } from "obsidian";
+import {
+	FileSystemAdapter,
+	MarkdownView,
+	Notice,
+	Plugin,
+	setIcon,
+	TAbstractFile,
+	TFile,
+} from "obsidian";
 import { runClaude } from "./claude";
 import { diffNote } from "./diff";
 import { confirm, formatDuration } from "./modals";
@@ -15,6 +23,14 @@ const ICON = "wand-2";
 const LABEL = "Fix Markdown with Claude";
 /** Runs kept for the report panel's picker. */
 const KEEP_RUNS = 20;
+/** Cap on what is kept of a run's tool calls for tracing file changes. */
+const MAX_MENTIONS = 200_000;
+
+/** True when the run's tool calls named this vault path (or its file name). */
+function mentions(run: FixRun, path: string): boolean {
+	const name = path.slice(path.lastIndexOf("/") + 1);
+	return run.mentions.includes(path) || (name !== "" && run.mentions.includes(name));
+}
 
 /** The address a note was clipped from, as Web Clipper records it. */
 export function sourceUrl(frontmatter: Record<string, unknown> | undefined): string | null {
@@ -66,6 +82,7 @@ export default class FixMarkdownPlugin extends Plugin {
 
 	private nextId = 1;
 	private ribbonIcon: HTMLElement | null = null;
+	private statusBarEl: HTMLElement | null = null;
 	private readonly headerButtons = new Map<MarkdownView, HTMLElement>();
 
 	async onload(): Promise<void> {
@@ -85,7 +102,18 @@ export default class FixMarkdownPlugin extends Plugin {
 		});
 		this.addCommand({
 			id: "cancel",
-			name: "Cancel the running fix",
+			name: "Cancel fixing the current note",
+			checkCallback: (checking) => {
+				const path = this.app.workspace.getActiveFile()?.path;
+				const run = path ? this.runningRun(path) : undefined;
+				if (!run) return false;
+				if (!checking) run.cancel();
+				return true;
+			},
+		});
+		this.addCommand({
+			id: "cancel-all",
+			name: "Cancel all running fixes",
 			checkCallback: (checking) => {
 				const running = this.runs.filter((run) => run.status === "running");
 				if (running.length === 0) return false;
@@ -114,8 +142,32 @@ export default class FixMarkdownPlugin extends Plugin {
 
 		this.registerEvent(this.app.workspace.on("layout-change", () => this.syncHeaderButtons()));
 		this.registerEvent(this.app.workspace.on("active-leaf-change", () => this.syncHeaderButtons()));
+		// A tab can switch notes without a layout change: keep its button's state right.
+		this.registerEvent(this.app.workspace.on("file-open", () => this.syncHeaderButtons()));
 		this.app.workspace.onLayoutReady(() => this.syncHeaderButtons());
 		this.syncRibbonIcon();
+
+		// Runs are matched to notes by path, so follow a note when it is renamed.
+		this.registerEvent(
+			this.app.vault.on("rename", (file, oldPath) => {
+				if (!(file instanceof TFile)) return;
+				const renamed = this.runs.filter((run) => run.notePath === oldPath);
+				for (const run of renamed) {
+					run.notePath = file.path;
+					run.noteName = file.basename;
+				}
+				for (const view of this.reportViews()) view.noteRenamed(oldPath, file.path);
+				for (const run of renamed) this.notifyViews(run, "state");
+			}),
+		);
+
+		this.statusBarEl = this.addStatusBarItem();
+		this.statusBarEl.addClass("mod-clickable", "fix-markdown-statusbar");
+		this.statusBarEl.addEventListener("click", () => {
+			const running = this.runs.filter((run) => run.status === "running");
+			void this.showReport(running.length === 1 ? running[0]!.id : null);
+		});
+		this.syncStatusBar();
 
 		this.addSettingTab(new FixMarkdownSettingTab(this.app, this));
 	}
@@ -151,7 +203,35 @@ export default class FixMarkdownPlugin extends Plugin {
 		}
 	}
 
-	/** Keep one Fix Markdown button in the header of every open note. */
+	/** The newest run of this note, if it was fixed in this session. */
+	latestRun(path: string): FixRun | undefined {
+		return this.runs.find((run) => run.notePath === path);
+	}
+
+	runningRun(path: string): FixRun | undefined {
+		return this.runs.find((run) => run.notePath === path && run.status === "running");
+	}
+
+	/** The source URL in a note's properties. */
+	noteSourceUrl(file: TFile): string | null {
+		return sourceUrl(this.app.metadataCache.getFileCache(file)?.frontmatter);
+	}
+
+	/** "Fixing 2 notes" in the status bar while any fix runs. */
+	private syncStatusBar(): void {
+		const el = this.statusBarEl;
+		if (!el) return;
+		const count = this.runs.filter((run) => run.status === "running").length;
+		el.toggle(count > 0);
+		if (count === 0) return;
+		el.empty();
+		setIcon(el.createSpan({ cls: "fix-markdown-statusbar-icon" }), ICON);
+		el.createSpan({ text: count === 1 ? "Fixing 1 note" : `Fixing ${count} notes` });
+		el.setAttribute("aria-label", "Show the fix report");
+		el.setAttribute("data-tooltip-position", "top");
+	}
+
+	/** Keep one Fix Markdown button in the header of every open note, lit while it is being fixed. */
 	syncHeaderButtons(): void {
 		const open = new Set<MarkdownView>();
 		if (this.settings.showHeaderButton) {
@@ -171,6 +251,11 @@ export default class FixMarkdownPlugin extends Plugin {
 			button.remove();
 			this.headerButtons.delete(view);
 		}
+		for (const [view, button] of this.headerButtons) {
+			const busy = view.file ? this.runningRun(view.file.path) !== undefined : false;
+			button.toggleClass("fix-markdown-busy", busy);
+			button.setAttribute("aria-label", busy ? "Claude is fixing this note: show progress" : LABEL);
+		}
 	}
 
 	/** Open the report panel in the right sidebar, on this run (or the latest). */
@@ -185,9 +270,18 @@ export default class FixMarkdownPlugin extends Plugin {
 		if (leaf.view instanceof ReportView) leaf.view.show(runId);
 	}
 
+	private reportViews(): ReportView[] {
+		return this.app.workspace
+			.getLeavesOfType(REPORT_VIEW)
+			.map((leaf) => leaf.view)
+			.filter((view): view is ReportView => view instanceof ReportView);
+	}
+
 	private notifyViews(run: FixRun, change: "log" | "state"): void {
-		for (const leaf of this.app.workspace.getLeavesOfType(REPORT_VIEW)) {
-			if (leaf.view instanceof ReportView) leaf.view.update(run, change);
+		for (const view of this.reportViews()) view.update(run, change);
+		if (change === "state") {
+			this.syncHeaderButtons();
+			this.syncStatusBar();
 		}
 	}
 
@@ -214,7 +308,7 @@ export default class FixMarkdownPlugin extends Plugin {
 			new Notice("Fix Markdown needs a vault stored on this computer.");
 			return;
 		}
-		const already = this.runs.find((run) => run.notePath === file.path && run.status === "running");
+		const already = this.runningRun(file.path);
 		if (already) {
 			void this.showReport(already.id);
 			new Notice(`Claude is already fixing "${file.basename}".`);
@@ -234,7 +328,7 @@ export default class FixMarkdownPlugin extends Plugin {
 		}
 
 		await this.saveOpenEdits(file);
-		const url = sourceUrl(this.app.metadataCache.getFileCache(file)?.frontmatter);
+		const url = this.noteSourceUrl(file);
 
 		const run: FixRun = {
 			id: this.nextId++,
@@ -249,24 +343,39 @@ export default class FixMarkdownPlugin extends Plugin {
 			created: [],
 			modified: [],
 			deleted: [],
+			uncertain: [],
+			mentions: "",
 			cancel: () => {},
 		};
 		this.runs.unshift(run);
 		this.runs.splice(KEEP_RUNS);
 
 		// Other files the run touches (attachments, mostly). Claude writes to disk;
-		// Obsidian's file watcher turns that into these events.
+		// Obsidian's file watcher turns that into these events. With several fixes
+		// running, a change can't be told apart by timing alone: `overlapped` keeps
+		// the ones made while another fix was running, sorted out when the run ends.
 		const others = {
 			created: new Set<string>(),
 			modified: new Set<string>(),
 			deleted: new Set<string>(),
+			/** Path → the other fixes that were running when it changed. */
+			overlapped: new Map<string, Set<FixRun>>(),
 		};
 		const track =
 			(kind: "created" | "modified" | "deleted") =>
 			(changed: TAbstractFile): void => {
-				if (changed.path === file.path || !(changed instanceof TFile)) return;
+				if (!(changed instanceof TFile)) return;
+				const running = this.runs.filter((each) => each.status === "running");
+				// A note being fixed belongs to its own run, which diffs it.
+				if (running.some((each) => each.notePath === changed.path)) return;
 				if (kind === "modified" && others.created.has(changed.path)) return;
 				others[kind].add(changed.path);
+				for (const other of running) {
+					if (other === run) continue;
+					const seen = others.overlapped.get(changed.path) ?? new Set<FixRun>();
+					seen.add(other);
+					others.overlapped.set(changed.path, seen);
+				}
 			};
 		const refs = [
 			this.app.vault.on("create", track("created")),
@@ -286,12 +395,14 @@ export default class FixMarkdownPlugin extends Plugin {
 				effort: this.settings.effort,
 				timeoutMs: this.settings.timeoutMinutes * 60_000,
 			},
-			(kind, text) => {
+			(kind, text, mention) => {
 				run.log.push({ at: Date.now() - run.startedAt, kind, text });
+				if (mention && run.mentions.length < MAX_MENTIONS) run.mentions += `\n${mention}`;
 				this.notifyViews(run, "log");
 			},
 		);
 		run.cancel = handle.cancel;
+		this.notifyViews(run, "state");
 
 		const mode = this.settings.showReport;
 		let progress: Notice | null = null;
@@ -315,13 +426,30 @@ export default class FixMarkdownPlugin extends Plugin {
 		if (last?.kind === "text" && last.text.trim() === result.report.trim()) run.log.pop();
 		run.after = await adapter.read(file.path).catch(() => "");
 		run.diff = diffNote(run.before ?? "", run.after);
-		run.created = [...others.created].sort();
-		run.modified = [...others.modified].filter((path) => !others.deleted.has(path)).sort();
-		run.deleted = [...others.deleted].filter((path) => !others.created.has(path)).sort();
+		// A file changed while another fix ran is that fix's if only it named the
+		// file; if neither did, it stays here, marked as uncertain.
+		const theirs = (path: string): boolean =>
+			!mentions(run, path) &&
+			[...(others.overlapped.get(path) ?? [])].some((other) => mentions(other, path));
+		const ours = (path: string): boolean => !theirs(path);
+		run.created = [...others.created].filter(ours).sort();
+		run.modified = [...others.modified]
+			.filter((path) => !others.deleted.has(path))
+			.filter(ours)
+			.sort();
+		run.deleted = [...others.deleted]
+			.filter((path) => !others.created.has(path))
+			.filter(ours)
+			.sort();
+		run.uncertain = [...run.created, ...run.modified, ...run.deleted].filter(
+			(path) => others.overlapped.has(path) && !mentions(run, path),
+		);
 		run.status = result.cancelled ? "cancelled" : result.ok ? "done" : "failed";
 		this.notifyViews(run, "state");
 
-		if (mode === "finish") await this.showReport(run.id);
+		// Don't pull the panel away from another report being read: the notice links here.
+		const readingOther = this.reportViews().some((view) => view.showsOtherRun(run.id));
+		if (mode === "finish" && !readingOther) await this.showReport(run.id);
 
 		const changed = run.diff.added + run.diff.removed;
 		const what = result.cancelled

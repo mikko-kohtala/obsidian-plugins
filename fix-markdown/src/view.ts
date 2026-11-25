@@ -1,7 +1,9 @@
 import {
 	Component,
 	ItemView,
+	Keymap,
 	MarkdownRenderer,
+	MarkdownView,
 	Notice,
 	setIcon,
 	TFile,
@@ -21,14 +23,35 @@ const STATUS_TEXT: Record<FixRun["status"], string> = {
 	cancelled: "Cancelled",
 };
 
-/** Side panel: what a fix is doing, then what it changed. */
+/** The parts of a run's row in the list that change while it runs. */
+interface RunRow {
+	time: HTMLElement;
+	detail: HTMLElement;
+}
+
+/**
+ * Side panel: what a fix is doing, then what it changed.
+ *
+ * It follows the note open in the main area and shows that note's latest run.
+ * Above it, a list of this session's runs shows every fix at a glance; picking
+ * one opens its note.
+ */
 export class ReportView extends ItemView {
-	private shownId: number | null = null;
+	/** The note the panel follows: the last one opened in the main area. */
+	private followPath: string | null = null;
+	/** A run chosen by hand (list, notice, Fix again); wins until another note opens. */
+	private pickedId: number | null = null;
+	/** What the body shows: "run:<id>", "note:<path>" or "". */
+	private bodyKey = "";
+	private listOpen = true;
+
+	private listEl!: HTMLElement;
+	private bodyEl!: HTMLElement;
+	private readonly rows = new Map<number, RunRow>();
 	private renderer = new Component();
 	private elapsedEl: HTMLElement | null = null;
 	private logEl: HTMLElement | null = null;
 	private logCount = 0;
-	private ticker: number | null = null;
 
 	constructor(
 		leaf: WorkspaceLeaf,
@@ -51,34 +74,87 @@ export class ReportView extends ItemView {
 
 	async onOpen(): Promise<void> {
 		this.contentEl.addClass("fix-markdown-view");
-		this.ticker = window.setInterval(() => this.tick(), 1000);
-		this.render();
+		this.listEl = this.contentEl.createDiv();
+		this.bodyEl = this.contentEl.createDiv();
+		const followActive = (): void => {
+			const active = this.app.workspace.getActiveFile();
+			if (active?.extension === "md") this.follow(active.path);
+		};
+		followActive();
+		// Restored at startup, the panel can open before any note has.
+		this.app.workspace.onLayoutReady(followActive);
+		// Focusing this panel, or a non-note tab, opens no note: keep the last one.
+		this.registerEvent(
+			this.app.workspace.on("file-open", (file) => {
+				if (file?.extension === "md") this.follow(file.path);
+			}),
+		);
+		this.registerInterval(window.setInterval(() => this.tick(), 1000));
+		if (!this.bodyKey) {
+			this.renderList();
+			this.renderBody();
+		}
 	}
 
 	async onClose(): Promise<void> {
-		if (this.ticker !== null) window.clearInterval(this.ticker);
 		this.renderer.unload();
 	}
 
-	/** Show this run (or the latest one). */
+	/** Show this run, or (null) the latest run of the note in view. */
 	show(runId: number | null): void {
-		this.shownId = runId;
-		this.render();
+		this.pickedId = runId;
+		this.renderList();
+		this.renderBody();
 	}
 
 	/** Called by the plugin when a run changes. */
 	update(run: FixRun, change: "log" | "state"): void {
-		if (this.current()?.id !== run.id && change === "log") return;
-		if (change === "log" && this.logEl) {
-			this.appendLogEntries(run);
+		if (change === "log") {
+			this.updateRow(run);
+			if (this.bodyKey === `run:${run.id}`) this.appendLogEntries(run);
 			return;
 		}
-		this.render();
+		this.renderList();
+		// Re-render the body only when it is about this run, or when this run is now
+		// the one to show (a new fix of the followed note). Otherwise the report being
+		// read keeps its scroll and open sections.
+		if (this.bodyKey === `run:${run.id}` || this.keyOf(this.current()) !== this.bodyKey) {
+			this.renderBody();
+		}
+	}
+
+	/** True when the panel shows a report of some other run. */
+	showsOtherRun(runId: number): boolean {
+		return this.bodyKey.startsWith("run:") && this.bodyKey !== `run:${runId}`;
+	}
+
+	/** Called by the plugin before it reports a renamed note's runs. */
+	noteRenamed(oldPath: string, newPath: string): void {
+		if (this.followPath === oldPath) this.followPath = newPath;
+		if (this.bodyKey === `note:${oldPath}`) this.bodyKey = `note:${newPath}`;
+	}
+
+	private follow(path: string): void {
+		if (path === this.followPath) return;
+		this.followPath = path;
+		if (this.picked()?.notePath !== path) this.pickedId = null;
+		this.renderList();
+		if (this.keyOf(this.current()) !== this.bodyKey) this.renderBody();
+	}
+
+	private picked(): FixRun | undefined {
+		return this.pickedId === null
+			? undefined
+			: this.plugin.runs.find((run) => run.id === this.pickedId);
 	}
 
 	private current(): FixRun | undefined {
-		const runs = this.plugin.runs;
-		return runs.find((run) => run.id === this.shownId) ?? runs[0];
+		return this.picked() ?? (this.followPath ? this.plugin.latestRun(this.followPath) : undefined);
+	}
+
+	private keyOf(run: FixRun | undefined): string {
+		if (run) return `run:${run.id}`;
+		return this.followPath ? `note:${this.followPath}` : "";
 	}
 
 	private tick(): void {
@@ -86,9 +162,121 @@ export class ReportView extends ItemView {
 		if (run?.status === "running" && this.elapsedEl) {
 			this.elapsedEl.setText(formatDuration(Date.now() - run.startedAt));
 		}
+		for (const each of this.plugin.runs) {
+			if (each.status === "running") this.updateRow(each);
+		}
 	}
 
-	private render(): void {
+	/** Open the run's note, reusing its tab when it is already open. */
+	private openNote(path: string, event?: MouseEvent | KeyboardEvent): void {
+		const file = this.app.vault.getAbstractFileByPath(path);
+		if (!(file instanceof TFile)) {
+			new Notice("The note is gone.");
+			return;
+		}
+		const newTab = event ? Keymap.isModEvent(event) : false;
+		const open = this.app.workspace
+			.getLeavesOfType("markdown")
+			.find((leaf) => leaf.view instanceof MarkdownView && leaf.view.file?.path === path);
+		if (open && !newTab) {
+			this.app.workspace.setActiveLeaf(open, { focus: true });
+		} else {
+			void this.app.workspace.getLeaf(newTab).openFile(file);
+		}
+	}
+
+	// --- the list of runs -----------------------------------------------------
+
+	private renderList(): void {
+		this.listEl.empty();
+		this.rows.clear();
+		const runs = this.plugin.runs;
+		const shown = this.current();
+		// A list of just the run already on screen says nothing.
+		if (runs.length === 0 || (runs.length === 1 && runs[0] === shown)) return;
+
+		const details = this.listEl.createEl("details", { cls: "fix-markdown-runs" });
+		details.open = this.listOpen;
+		details.addEventListener("toggle", () => (this.listOpen = details.open));
+		const running = runs.filter((run) => run.status === "running").length;
+		const summary = details.createEl("summary");
+		summary.createSpan({ text: "Fixes this session" });
+		summary.createSpan({
+			cls: "fix-markdown-runs-count",
+			text: running > 0 ? `${running} running` : String(runs.length),
+		});
+
+		const list = details.createDiv({ cls: "fix-markdown-runs-list" });
+		for (const run of runs) {
+			const row = list.createDiv({
+				cls: `fix-markdown-run fix-markdown-run-${run.status}`,
+				attr: { role: "button", tabindex: "0" },
+			});
+			if (run === shown) row.addClass("is-active");
+			row.createSpan({ cls: `fix-markdown-dot fix-markdown-dot-${this.dotKind(run)}` });
+			const main = row.createDiv({ cls: "fix-markdown-run-main" });
+			const top = main.createDiv({ cls: "fix-markdown-run-top" });
+			top.createSpan({ cls: "fix-markdown-run-name", text: run.noteName });
+			const time = top.createSpan({ cls: "fix-markdown-run-time" });
+			const detail = main.createDiv({ cls: "fix-markdown-run-detail" });
+			this.rows.set(run.id, { time, detail });
+			this.updateRow(run);
+
+			row.addEventListener("click", (event) => this.pick(run, event));
+			row.addEventListener("keydown", (event) => {
+				if (event.key !== "Enter" && event.key !== " ") return;
+				event.preventDefault();
+				this.pick(run, event);
+			});
+		}
+	}
+
+	private dotKind(run: FixRun): string {
+		if (run.status === "done" && run.dryRun) return "dry";
+		return run.status;
+	}
+
+	private updateRow(run: FixRun): void {
+		const row = this.rows.get(run.id);
+		if (!row) return;
+		if (run.status === "running") {
+			row.time.setText(formatDuration(Date.now() - run.startedAt));
+			row.detail.setText(this.lastActivity(run));
+			return;
+		}
+		row.time.setText(
+			new Date(run.startedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+		);
+		const parts = [this.statusLabel(run)];
+		if (run.result) parts.push(formatDuration(run.result.durationMs));
+		if (run.undone) parts.push("undone");
+		else if (run.diff && run.diff.added + run.diff.removed > 0) {
+			parts.push(`+${run.diff.added} −${run.diff.removed}`);
+		}
+		row.detail.setText(parts.join(" · "));
+	}
+
+	/** One line on what a running fix is doing now. */
+	private lastActivity(run: FixRun): string {
+		const last = run.log[run.log.length - 1];
+		if (!last) return "Starting…";
+		const line = last.text.split("\n")[0] ?? "";
+		return line.replace(/[*_`#>]/g, "").trim();
+	}
+
+	private pick(run: FixRun, event: MouseEvent | KeyboardEvent): void {
+		this.pickedId = run.id;
+		if (run.notePath !== this.followPath) {
+			this.followPath = run.notePath;
+			this.openNote(run.notePath, event);
+		}
+		this.renderList();
+		this.renderBody();
+	}
+
+	// --- the shown run (or the followed note) --------------------------------
+
+	private renderBody(): void {
 		this.renderer.unload();
 		this.renderer = new Component();
 		this.renderer.load();
@@ -96,18 +284,15 @@ export class ReportView extends ItemView {
 		this.logEl = null;
 		this.logCount = 0;
 
-		const root = this.contentEl;
+		const root = this.bodyEl;
 		root.empty();
 		const run = this.current();
+		this.bodyKey = this.keyOf(run);
 		if (!run) {
-			root.createDiv({
-				cls: "fix-markdown-empty",
-				text: "Press the wand button on a note to fix it. What Claude does and what it changes shows up here.",
-			});
+			this.renderIdle(root);
 			return;
 		}
 
-		this.renderPicker(root, run);
 		this.renderHeader(root, run);
 
 		if (run.status === "running") {
@@ -122,22 +307,36 @@ export class ReportView extends ItemView {
 		this.renderLog(root, run, false);
 	}
 
-	private renderPicker(root: HTMLElement, run: FixRun): void {
-		const runs = this.plugin.runs;
-		if (runs.length < 2) return;
-		const select = root.createEl("select", { cls: "dropdown fix-markdown-picker" });
-		for (const each of runs) {
-			const when = new Date(each.startedAt).toLocaleTimeString([], {
-				hour: "2-digit",
-				minute: "2-digit",
+	/** The followed note has not been fixed in this session. */
+	private renderIdle(root: HTMLElement): void {
+		const file = this.followPath ? this.app.vault.getAbstractFileByPath(this.followPath) : null;
+		if (!(file instanceof TFile)) {
+			root.createDiv({
+				cls: "fix-markdown-empty",
+				text: "Open a note to fix it. What Claude does and what it changes shows up here.",
 			});
-			const option = select.createEl("option", {
-				text: `${when} · ${each.noteName} · ${this.statusLabel(each)}`,
-				value: String(each.id),
-			});
-			option.selected = each.id === run.id;
+			return;
 		}
-		select.addEventListener("change", () => this.show(Number(select.value)));
+		const header = root.createDiv({ cls: "fix-markdown-header" });
+		header.createDiv({ cls: "fix-markdown-title", text: file.basename });
+		header.createDiv({ cls: "fix-markdown-meta", text: "Not fixed in this session." });
+
+		const url = this.plugin.noteSourceUrl(file);
+		const source = header.createDiv({ cls: "fix-markdown-source" });
+		if (url) {
+			source.createSpan({ text: "Source: " });
+			source.createEl("a", { text: url, href: url });
+		} else {
+			source.setText(
+				"No source URL in the note's properties: Claude will fix it without comparing with the original.",
+			);
+		}
+
+		const dryRun = this.plugin.settings.permissionMode === "plan";
+		const actions = header.createDiv({ cls: "fix-markdown-actions" });
+		this.button(actions, "wand-2", dryRun ? "Check this note" : "Fix this note", () => {
+			void this.plugin.fix(file);
+		}).addClass("mod-cta");
 	}
 
 	private statusLabel(run: FixRun): string {
@@ -152,7 +351,7 @@ export class ReportView extends ItemView {
 		const link = title.createEl("a", { text: run.noteName, href: "#" });
 		link.addEventListener("click", (event) => {
 			event.preventDefault();
-			void this.app.workspace.openLinkText(run.notePath, "", false);
+			this.openNote(run.notePath, event);
 		});
 
 		const meta = header.createDiv({ cls: "fix-markdown-meta" });
@@ -166,6 +365,14 @@ export class ReportView extends ItemView {
 		});
 		if (run.status === "running") this.elapsedEl = elapsed;
 		if (run.result?.turns !== undefined) meta.createSpan({ text: `${run.result.turns} steps` });
+		const latest = this.plugin.latestRun(run.notePath);
+		if (latest && latest !== run) {
+			const newer = meta.createEl("a", { text: "Show the latest run", href: "#" });
+			newer.addEventListener("click", (event) => {
+				event.preventDefault();
+				this.show(latest.id);
+			});
+		}
 
 		if (run.sourceUrl) {
 			const source = header.createDiv({ cls: "fix-markdown-source" });
@@ -188,9 +395,9 @@ export class ReportView extends ItemView {
 		}
 		const sessionId = run.result?.sessionId;
 		if (sessionId) {
-			this.button(actions, "terminal", "Copy resume command", (button) => {
+			this.button(actions, "terminal", "Copy resume command", (label) => {
 				void navigator.clipboard.writeText(`claude --resume ${sessionId}`);
-				button.setText("Copied: run it from the vault folder");
+				label.setText("Copied: run it from the vault folder");
 			});
 		}
 		this.button(actions, "rotate-ccw", "Fix again", () => {
@@ -203,13 +410,14 @@ export class ReportView extends ItemView {
 		parent: HTMLElement,
 		icon: string,
 		label: string,
-		onClick: (button: HTMLElement) => void,
-	): void {
+		onClick: (label: HTMLElement) => void,
+	): HTMLElement {
 		const button = parent.createEl("button", { cls: "fix-markdown-button" });
 		const iconEl = button.createSpan();
 		setIcon(iconEl, icon);
 		const labelEl = button.createSpan({ text: label });
 		button.addEventListener("click", () => onClick(labelEl));
+		return button;
 	}
 
 	private section(root: HTMLElement, title: string, open = true): HTMLElement {
@@ -243,7 +451,10 @@ export class ReportView extends ItemView {
 			return;
 		}
 		if (diff.hunks.length === 0) {
-			body.createDiv({ cls: "fix-markdown-muted", text: "The note was not changed." });
+			body.createDiv({
+				cls: "fix-markdown-muted",
+				text: run.undone ? "The fix was undone." : "The note was not changed.",
+			});
 			return;
 		}
 		for (const hunk of diff.hunks) {
@@ -286,6 +497,13 @@ export class ReportView extends ItemView {
 		const count = groups.reduce((sum, [, files]) => sum + files.length, 0);
 		if (count === 0) return;
 		const body = this.section(root, `Other files: ${count}`);
+		const uncertain = new Set(run.uncertain);
+		if (uncertain.size > 0) {
+			body.createDiv({
+				cls: "fix-markdown-muted",
+				text: "Another fix ran at the same time. Files marked “maybe” changed while both were running, and neither run named them.",
+			});
+		}
 		for (const [label, files] of groups) {
 			for (const path of files) {
 				const row = body.createDiv({ cls: "fix-markdown-file" });
@@ -300,6 +518,7 @@ export class ReportView extends ItemView {
 				} else {
 					row.createSpan({ text: path });
 				}
+				if (uncertain.has(path)) row.createSpan({ cls: "fix-markdown-maybe", text: "maybe" });
 			}
 		}
 	}
@@ -371,6 +590,7 @@ export class ReportView extends ItemView {
 		run.diff = { hunks: [], added: 0, removed: 0, tooLarge: false };
 		run.undone = true;
 		new Notice(`Undid the fix to "${run.noteName}".`, 5000);
-		this.render();
+		this.renderList();
+		this.renderBody();
 	}
 }

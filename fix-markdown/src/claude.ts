@@ -103,6 +103,12 @@ export function describeTool(name: string, input: Json): string {
 	}
 }
 
+/** The file path or command a tool call names, so a change on disk can be traced to its run. */
+export function toolMention(name: string, input: Json): string {
+	if (name === "Bash") return text(input["command"]);
+	return text(input["file_path"]) || text(input["path"]) || text(input["notebook_path"]);
+}
+
 /**
  * Start `claude -p` and report activity as it happens.
  * The run uses the CLI's own login: API-key variables are removed from its
@@ -113,7 +119,8 @@ export type ActivityKind = "tool" | "text";
 
 export function runClaude(
 	options: ClaudeOptions,
-	onActivity: (kind: ActivityKind, line: string) => void,
+	/** `mention` is what a tool call names (see toolMention); empty for text. */
+	onActivity: (kind: ActivityKind, line: string, mention: string) => void,
 ): ClaudeRun {
 	const started = Date.now();
 	const claudePath = expandHome(options.claudePath);
@@ -180,9 +187,11 @@ export function runClaude(
 			for (const part of content) {
 				const block = asRecord(part);
 				if (block?.["type"] === "tool_use") {
-					onActivity("tool", describeTool(text(block["name"]), asRecord(block["input"]) ?? {}));
+					const name = text(block["name"]);
+					const input = asRecord(block["input"]) ?? {};
+					onActivity("tool", describeTool(name, input), toolMention(name, input));
 				} else if (block?.["type"] === "text" && text(block["text"]).trim()) {
-					onActivity("text", text(block["text"]).trim());
+					onActivity("text", text(block["text"]).trim(), "");
 				}
 			}
 		} else if (event["type"] === "result") {

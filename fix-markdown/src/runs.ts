@@ -30,5 +30,9 @@ export interface FixRun {
 	created: string[];
 	modified: string[];
 	deleted: string[];
+	/** Files that changed while another fix was also running and that neither run named. */
+	uncertain: string[];
+	/** File paths and commands from this run's tool calls (see toolMention). */
+	mentions: string;
 	cancel: () => void;
 }

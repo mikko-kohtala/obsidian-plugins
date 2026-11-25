@@ -10,7 +10,7 @@ URL it was clipped from.
 - **Note header** — a wand icon at the top right of every note.
 - **Left ribbon** — the same icon.
 - **Right-click a note** (file explorer or tab menu) → *Fix Markdown with Claude*.
-- **Command palette** — *Fix current note with Claude*, *Cancel the running fix*, *Show the fix report*.
+- **Command palette** — *Fix current note with Claude*, *Cancel fixing the current note*, *Cancel all running fixes*, *Show the fix report*.
 
 ## What a click does
 
@@ -44,11 +44,31 @@ URL it was clipped from.
 
 *Open the report panel* in settings picks when the panel appears: right away
 (default), when the fix is done, or only when you click the notice. The command
-*Show the fix report* opens it any time; a picker at the top switches between
-this session's runs.
+*Show the fix report* opens it any time.
+
+## Fixing several notes at once
 
 Several notes can be fixed at the same time; one note can't be fixed twice at
-once.
+once. Start a fix, switch to the next note, start another.
+
+- **The panel follows the note you have open.** It shows that note's latest
+  run, or a *Fix this note* button if it hasn't been fixed in this session.
+  Clicking inside the panel or opening a non-note tab keeps the last note.
+- **Fixes this session** at the top of the panel lists every run: a dot for
+  its state, what a running fix is doing right now and for how long, and for a
+  finished one its result and lines changed. Click a run to open its note
+  (Cmd-click: in a new tab) and show that run. A run picked by hand, from the
+  list or a notice, stays on screen until you open another note.
+- The wand in a note's header pulses while that note is being fixed, and the
+  status bar says *Fixing 2 notes*; click it to open the panel.
+- When another fix finishes, only its row in the list changes: the report you
+  are reading keeps its place. (With *Open the report panel: when the fix is
+  done*, a finished fix opens the panel on itself only when the panel isn't
+  showing another report; the notice still links to it.)
+
+Each run lists the other files that changed while it ran. With two fixes
+running, a file goes to the run whose commands or edits named it; a file
+neither named is listed under both, marked *maybe*.
 
 ## Always the local Claude
 
